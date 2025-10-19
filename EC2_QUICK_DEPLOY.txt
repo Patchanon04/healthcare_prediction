@@ -1,0 +1,272 @@
+═══════════════════════════════════════════════════════════════
+🚀 Quick Deploy Guide - AWS EC2
+Dog Breed Prediction System
+═══════════════════════════════════════════════════════════════
+
+📋 PRE-DEPLOYMENT CHECKLIST:
+───────────────────────────────────────────────────────────────
+□ มี AWS Account พร้อม payment method
+□ สร้าง S3 bucket: dogbreed-images แล้ว
+□ มี AWS IAM credentials (Access Key + Secret Key)
+□ มี EC2 key pair (.pem file)
+□ ตั้งค่า Security Group แล้ว (ports 22, 80, 443, 8000, 5001)
+
+═══════════════════════════════════════════════════════════════
+🎯 STEP-BY-STEP DEPLOYMENT (15-20 นาที)
+═══════════════════════════════════════════════════════════════
+
+STEP 1: สร้าง EC2 Instance
+───────────────────────────────────────────────────────────────
+1. ไป EC2 Console: https://console.aws.amazon.com/ec2/
+2. Launch Instance
+3. ตั้งค่า:
+   - AMI: Ubuntu 22.04 LTS
+   - Type: t3.medium (minimum) หรือ t3.large (recommended)
+   - Storage: 30 GB gp3
+   - Key pair: สร้างใหม่และ download .pem
+   - Security Group:
+     * SSH (22) from My IP
+     * HTTP (80) from Anywhere
+     * HTTPS (443) from Anywhere
+     * Custom TCP (8000) from Anywhere
+     * Custom TCP (5001) from Anywhere
+
+STEP 2: SSH เข้า EC2
+───────────────────────────────────────────────────────────────
+# macOS/Linux:
+chmod 400 your-key.pem
+ssh -i your-key.pem ubuntu@<EC2-PUBLIC-IP>
+
+# Windows PowerShell:
+ssh -i your-key.pem ubuntu@<EC2-PUBLIC-IP>
+
+STEP 3: Upload Project Files
+───────────────────────────────────────────────────────────────
+# จาก local machine (terminal ใหม่):
+cd /Users/emperor/Desktop/Xtax
+scp -i your-key.pem -r MLOPs ubuntu@<EC2-PUBLIC-IP>:~/
+
+STEP 4: Run Deploy Script (บน EC2)
+───────────────────────────────────────────────────────────────
+cd ~/MLOPs
+chmod +x deploy-ec2.sh
+./deploy-ec2.sh
+
+# สคริปต์จะ:
+# ✅ ติดตั้ง Docker + Docker Compose
+# ✅ Build images
+# ✅ Start services
+# ✅ Run migrations
+# ✅ ตั้งค่า auto-start
+
+STEP 5: แก้ไข .env File
+───────────────────────────────────────────────────────────────
+nano .env
+
+# แก้ไขค่าเหล่านี้:
+USE_S3=True
+AWS_ACCESS_KEY_ID=<YOUR-KEY>
+AWS_SECRET_ACCESS_KEY=<YOUR-SECRET>
+AWS_STORAGE_BUCKET_NAME=dogbreed-images
+AWS_S3_REGION_NAME=us-east-1
+
+DJANGO_SECRET_KEY=<GENERATE-NEW-KEY>
+DEBUG=False
+ALLOWED_HOSTS=<EC2-IP>,yourdomain.com
+
+POSTGRES_PASSWORD=<STRONG-PASSWORD>
+
+STEP 6: Restart Services
+───────────────────────────────────────────────────────────────
+docker-compose down
+docker-compose up -d
+
+STEP 7: Create Superuser (Optional)
+───────────────────────────────────────────────────────────────
+docker-compose exec backend python manage.py createsuperuser
+
+STEP 8: Test Application
+───────────────────────────────────────────────────────────────
+# เปิด browser:
+http://<EC2-PUBLIC-IP>
+
+═══════════════════════════════════════════════════════════════
+🔧 MANUAL DEPLOYMENT (ถ้าไม่ใช้ script)
+═══════════════════════════════════════════════════════════════
+
+# 1. Update system
+sudo apt update && sudo apt upgrade -y
+
+# 2. Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker ubuntu
+
+# 3. Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# 4. Logout and login again
+exit
+ssh -i your-key.pem ubuntu@<EC2-PUBLIC-IP>
+
+# 5. Setup project
+cd ~/MLOPs
+cp .env.example .env
+nano .env  # แก้ไขตามด้านบน
+
+# 6. Build and start
+docker-compose build
+docker-compose up -d
+
+# 7. Run migrations
+docker-compose exec backend python manage.py migrate
+
+═══════════════════════════════════════════════════════════════
+✅ VERIFICATION STEPS
+═══════════════════════════════════════════════════════════════
+
+# 1. Check services running
+docker-compose ps
+
+# 2. Check backend health
+curl http://localhost:8000/api/v1/health/
+
+# 3. Check ML service
+curl http://localhost:5001/health/
+
+# 4. Check logs
+docker-compose logs -f
+
+# 5. Test upload
+open http://<EC2-PUBLIC-IP>
+
+═══════════════════════════════════════════════════════════════
+📊 USEFUL COMMANDS
+═══════════════════════════────────────────────────────────────
+
+# View all logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f backend
+docker-compose logs -f ml_service
+
+# Restart services
+docker-compose restart
+
+# Stop services
+docker-compose down
+
+# Rebuild and restart
+docker-compose down
+docker-compose build
+docker-compose up -d
+
+# Check resource usage
+docker stats
+htop
+
+# Check disk space
+df -h
+
+═══════════════════════════════════════════════════════════════
+🔐 SECURITY CHECKLIST
+═══════════════════════════════════════════════────════────────
+
+□ เปลี่ยน POSTGRES_PASSWORD ให้แข็งแรง
+□ Generate DJANGO_SECRET_KEY ใหม่
+□ ตั้ง DEBUG=False
+□ จำกัด Security Group rules
+□ ตั้งค่า SSL/HTTPS (ถ้ามี domain)
+□ Enable firewall (UFW)
+□ Regular backups
+□ Monitor logs
+
+═══════════════════════════════════════════════════════════════
+💰 COST ESTIMATION
+═══════════════════════════────────────────────────────────────
+
+t3.medium (2 vCPU, 4GB RAM):
+  - EC2 instance:    ~$30/month
+  - EBS 30GB:        ~$3/month
+  - Data transfer:   ~$9/month (100GB)
+  - S3 storage:      ~$0.05/month (2GB)
+  ────────────────
+  Total:            ~$42/month
+
+t3.large (2 vCPU, 8GB RAM):
+  - EC2 instance:    ~$60/month
+  - EBS 30GB:        ~$3/month
+  - Data transfer:   ~$9/month
+  - S3 storage:      ~$0.05/month
+  ────────────────
+  Total:            ~$72/month
+
+═══════════════════════════════════════════════════════════════
+🚨 TROUBLESHOOTING
+═══════════════════════════════════════════════────════════════
+
+Problem: Cannot connect to EC2
+→ Check Security Group allows port 22 from your IP
+→ Check .pem file permissions (chmod 400)
+
+Problem: Services not starting
+→ Check logs: docker-compose logs
+→ Check disk space: df -h
+→ Check memory: free -h
+
+Problem: Frontend shows blank page
+→ Check CORS_ALLOWED_ORIGINS in .env
+→ Check VUE_APP_API_URL in .env
+
+Problem: Cannot upload images
+→ Check AWS credentials in .env
+→ Check S3 bucket exists and has permissions
+→ Check S3 bucket policy allows public read
+
+Problem: ML service 400 error
+→ Check S3 bucket policy allows public read
+→ Check ML service logs
+
+═══════════════════════════════════════════════════════════════
+📚 NEXT STEPS (PRODUCTION READY)
+═══════════════════════════════════════════════════════════════
+
+1. Domain Name
+   - ซื้อ domain
+   - ตั้งค่า Route 53 DNS
+
+2. SSL Certificate
+   - ติดตั้ง Certbot
+   - รัน: sudo certbot --nginx -d yourdomain.com
+
+3. Nginx Reverse Proxy
+   - ติดตั้ง nginx
+   - ปิด ports 8000, 5001 จาก public
+   - Proxy ผ่าน nginx
+
+4. Monitoring
+   - ตั้งค่า CloudWatch
+   - ติดตั้ง monitoring tools
+
+5. Backups
+   - Automated database backups
+   - S3 versioning
+
+6. Auto Scaling (Optional)
+   - Create AMI
+   - Setup Auto Scaling Group
+   - Add Load Balancer
+
+═══════════════════════════════════════════════════════════════
+📖 DOCUMENTATION
+═══════════════════════════════════════════════════────────────
+
+Full Guide:    EC2_DEPLOYMENT_GUIDE.md
+Deploy Script: deploy-ec2.sh
+This File:    EC2_QUICK_DEPLOY.txt
+
+═══════════════════════════════════════════════════════════════
+✨ READY TO DEPLOY!
+═══════════════════════════════════════════════════════════════
