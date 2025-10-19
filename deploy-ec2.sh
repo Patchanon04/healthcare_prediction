@@ -126,13 +126,12 @@ fi
 # ============================================
 echo -e "${GREEN}🏗️  Step 8: Building Docker images...${NC}"
 echo -e "${YELLOW}This may take 5-10 minutes...${NC}"
-docker-compose build
-
+docker-compose -f docker-compose.prod.yml build
 # ============================================
 # Step 9: Start Services
 # ============================================
 echo -e "${GREEN}🚀 Step 9: Starting services...${NC}"
-docker-compose up -d
+docker-compose -f docker-compose.prod.yml up -d
 
 echo -e "${YELLOW}Waiting for services to be ready (30 seconds)...${NC}"
 sleep 30
@@ -141,7 +140,7 @@ sleep 30
 # Step 10: Run Migrations
 # ============================================
 echo -e "${GREEN}📊 Step 10: Running database migrations...${NC}"
-docker-compose exec -T backend python manage.py migrate
+docker-compose -f docker-compose.prod.yml exec -T backend python manage.py migrate
 
 # ============================================
 # Step 11: Health Checks
@@ -149,11 +148,11 @@ docker-compose exec -T backend python manage.py migrate
 echo -e "${GREEN}🏥 Step 11: Running health checks...${NC}"
 
 # Check if services are running
-if docker-compose ps | grep -q "Up"; then
+if docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
     echo -e "${GREEN}✅ Services are running${NC}"
 else
     echo -e "${RED}❌ Some services are not running${NC}"
-    docker-compose ps
+    docker-compose -f docker-compose.prod.yml ps
     exit 1
 fi
 
@@ -186,8 +185,8 @@ After=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=$(pwd)
-ExecStart=/usr/local/bin/docker-compose up -d
-ExecStop=/usr/local/bin/docker-compose down
+ExecStart=/usr/local/bin/docker-compose -f /home/ubuntu/MLOPs/docker-compose.prod.yml up -d
+ExecStop=/usr/local/bin/docker-compose -f /home/ubuntu/MLOPs/docker-compose.prod.yml down
 User=$USER
 
 [Install]
@@ -244,5 +243,5 @@ echo ""
 echo -e "${YELLOW}Create Django superuser now? (y/n)${NC}"
 read -r response
 if [[ "$response" =~ ^[Yy]$ ]]; then
-    docker-compose exec backend python manage.py createsuperuser
+    docker-compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
 fi
