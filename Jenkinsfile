@@ -2,12 +2,7 @@ pipeline {
   agent any
   options {
     timestamps()
-    ansiColor('xterm')
     timeout(time: 30, unit: 'MINUTES')
-  }
-  triggers {
-    // ใช้ GitHub webhook เป็นหลัก; เปิดบรรทัดล่างถ้าต้องการ fallback เป็น polling
-    // pollSCM('H/5 * * * *')
   }
   environment {
     COMPOSE_FILE = 'docker-compose.prod.yml'
