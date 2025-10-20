@@ -26,15 +26,6 @@ pipeline {
     stage('Build & Deploy') {
       steps {
         dir(env.WORKDIR) {
-          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USR', passwordVariable: 'DOCKER_PSW')]) {
-            retry(3) {
-              sh '''
-                set -e
-                echo "$DOCKER_PSW" | docker login -u "$DOCKER_USR" --password-stdin https://index.docker.io/v1/
-                docker info | awk -F': ' '/Username/ {print $0}'; true
-              '''
-            }
-          }
           retry(3) {
             sh '''
               set -e
