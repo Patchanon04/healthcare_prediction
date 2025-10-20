@@ -30,6 +30,8 @@ pipeline {
             sh '''
               set -e
               echo "Using compose: ${COMPOSE_FILE}"
+              # Stop previous stack to avoid container name conflicts
+              docker-compose -f ${COMPOSE_FILE} down --remove-orphans || true
               # Build without --pull so it uses local cache/base images if present
               docker-compose -f ${COMPOSE_FILE} build
               # Start/update services (will only pull images not present)
