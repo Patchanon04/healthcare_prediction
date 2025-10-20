@@ -11,7 +11,6 @@ pipeline {
   }
   stages {
     stage('Checkout') {
-      when { branch 'main' }
       steps {
         checkout scm
         script {
@@ -23,21 +22,19 @@ pipeline {
     }
 
     stage('Backend Quick Test') {
-      when { branch 'main' }
       steps {
         dir(env.WORKDIR) {
           // ทดสอบสั้นๆ ไม่ fail build ถ้าไม่มี test ครบถ้วน
           sh '''
             set -e
             docker build -t dogbreed-backend-test -f backend/Dockerfile backend
-            docker run --rm dogbreed-backend-test bash -lc "python -c 'print(\"backend image ok\")'"
+            docker run --rm dogbreed-backend-test bash -lc "python -c 'print(\\"backend image ok\\")'"
           '''
         }
       }
     }
 
     stage('Build & Deploy') {
-      when { branch 'main' }
       steps {
         dir(env.WORKDIR) {
           sh '''
@@ -52,7 +49,6 @@ pipeline {
     }
 
     stage('DB Migrate') {
-      when { branch 'main' }
       steps {
         dir(env.WORKDIR) {
           sh '''
@@ -65,7 +61,6 @@ pipeline {
     }
 
     stage('Post-deploy Health Checks') {
-      when { branch 'main' }
       steps {
         dir(env.WORKDIR) {
           sh '''
