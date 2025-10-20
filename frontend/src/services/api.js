@@ -2,7 +2,9 @@ import axios from 'axios'
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: process.env.VUE_APP_API_URL || 'http://localhost:8000',
+  // Use same-origin by default so requests go through Nginx proxy (/api -> backend)
+  // Allow override via VUE_APP_API_URL for dev or explicit deployments
+  baseURL: process.env.VUE_APP_API_URL || '',
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
