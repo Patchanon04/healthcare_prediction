@@ -42,6 +42,12 @@ pipeline {
               if [ -n "$EF" ]; then ENV_ARG="--env-file $EF"; else ENV_ARG=""; fi
               echo "Using env file: ${EF:-<none>}"
 
+              # Fail fast if no env file is readable to avoid bringing up services with empty secrets
+              if [ -z "$EF" ]; then
+                echo "ERROR: No readable .env file found (checked: ${ENV_FILE}, /var/lib/jenkins/.env, ./.env). Aborting." >&2
+                exit 1
+              fi
+
               # Stop previous stack (same project name) and remove orphans
               docker-compose $ENV_ARG -f ${COMPOSE_FILE} down --remove-orphans || true
 
