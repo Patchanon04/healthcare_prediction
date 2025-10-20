@@ -6,8 +6,8 @@ pipeline {
   }
   environment {
     COMPOSE_FILE = 'docker-compose.prod.yml'
-    // ปรับ path ถ้า Jenkins ไม่รันในโฟลเดอร์ root ของ repo
-    WORKDIR = ''
+    // โฟลเดอร์ทำงานของ pipeline (root ของ repo)
+    WORKDIR = '.'
   }
   stages {
     stage('Checkout') {
