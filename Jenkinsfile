@@ -34,17 +34,25 @@ pipeline {
             sh '''
               set -e
               echo "Using compose: ${COMPOSE_FILE} (project: ${COMPOSE_PROJECT_NAME})"
+              # Pick a readable .env file: ENV_FILE -> /var/lib/jenkins/.env -> ./.env
+              EF=""
+              for p in "${ENV_FILE}" "/var/lib/jenkins/.env" "./.env"; do
+                if [ -n "$p" ] && [ -r "$p" ]; then EF="$p"; break; fi
+              done
+              if [ -n "$EF" ]; then ENV_ARG="--env-file $EF"; else ENV_ARG=""; fi
+              echo "Using env file: ${EF:-<none>}"
+
               # Stop previous stack (same project name) and remove orphans
-              docker-compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE} down --remove-orphans || true
+              docker-compose $ENV_ARG -f ${COMPOSE_FILE} down --remove-orphans || true
 
               # Safety net: remove any lingering named containers from older runs
               docker rm -f dogbreed_backend dogbreed_frontend dogbreed_db dogbreed_ml_service 2>/dev/null || true
 
               # Build without --pull so it uses local cache/base images if present
-              docker-compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE} build
+              docker-compose $ENV_ARG -f ${COMPOSE_FILE} build
 
               # Start/update services
-              docker-compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE} up -d
+              docker-compose $ENV_ARG -f ${COMPOSE_FILE} up -d
             '''
           }
         }
