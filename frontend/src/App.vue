@@ -7,7 +7,7 @@
           <span class="text-4xl mr-3">🐕</span>
           Dog Breed Prediction
         </h1>
-        <p class="text-gray-600 mt-2">Upload a dog image and discover its breed using Machine Learning</p>
+        <p class="text-gray-600 mt-2">Upload a dog image and discover its breed using Machine learning </p>
       </div>
     </header>
 
