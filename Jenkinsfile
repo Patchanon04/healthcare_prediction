@@ -39,8 +39,9 @@ pipeline {
             sh '''
               set -e
               echo "Using compose: ${COMPOSE_FILE}"
-              docker-compose -f ${COMPOSE_FILE} pull || true
-              docker-compose -f ${COMPOSE_FILE} build --no-cache --pull
+              # Build without --pull so it uses local cache/base images if present
+              docker-compose -f ${COMPOSE_FILE} build
+              # Start/update services (will only pull images not present)
               docker-compose -f ${COMPOSE_FILE} up -d
             '''
           }
