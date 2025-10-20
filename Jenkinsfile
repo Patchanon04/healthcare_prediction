@@ -21,36 +21,19 @@ pipeline {
       }
     }
 
-    stage('Backend Quick Test') {
-      steps {
-        dir(env.WORKDIR) {
-          // ทดสอบสั้นๆ พร้อม login Docker Hub และ retry เพื่อกัน error เครือข่าย/503
-          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USR', passwordVariable: 'DOCKER_PSW')]) {
-            sh '''
-              set -e
-              echo "$DOCKER_PSW" | docker login -u "$DOCKER_USR" --password-stdin || true
-            '''
-          }
-          retry(3) {
-            sh '''
-              set -e
-              sleep 2
-              docker build --pull -t dogbreed-backend-test -f backend/Dockerfile backend
-              docker run --rm dogbreed-backend-test bash -lc "python -c 'print(\\"backend image ok\\")'"
-            '''
-          }
-        }
-      }
-    }
+    
 
     stage('Build & Deploy') {
       steps {
         dir(env.WORKDIR) {
           withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USR', passwordVariable: 'DOCKER_PSW')]) {
-            sh '''
-              set -e
-              echo "$DOCKER_PSW" | docker login -u "$DOCKER_USR" --password-stdin || true
-            '''
+            retry(3) {
+              sh '''
+                set -e
+                echo "$DOCKER_PSW" | docker login -u "$DOCKER_USR" --password-stdin https://index.docker.io/v1/
+                docker info | awk -F': ' '/Username/ {print $0}'; true
+              '''
+            }
           }
           retry(3) {
             sh '''
