@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Production Docker Compose Configuration
 # สำหรับ AWS EC2 deployment
 
@@ -111,7 +109,7 @@ services:
       dockerfile: Dockerfile
     container_name: dogbreed_frontend
     ports:
-      - "80:80"
+      - "8081:80"
     depends_on:
       - backend
     healthcheck:
