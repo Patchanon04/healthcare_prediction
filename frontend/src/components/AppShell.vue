@@ -3,7 +3,7 @@
     <!-- Sidebar -->
     <aside class="w-60 bg-white/80 backdrop-blur shadow-md p-4 hidden md:block">
       <div class="flex items-center space-x-2 mb-6">
-        <span class="font-bold text-gray-700">MedAI</span>
+        <span class="font-bold text-gray-700">MedML</span>
       </div>
       <nav class="space-y-2">
         <router-link to="/home" class="block px-3 py-2 rounded hover:bg-blue-100" active-class="bg-blue-200 font-semibold">Home</router-link>
