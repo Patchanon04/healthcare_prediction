@@ -70,8 +70,54 @@ pipeline {
         dir(env.WORKDIR) {
           sh '''
             set -e
-            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py makemigrations predictions || true
-            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate
+            
+            # Try to run migrations
+            if ! docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate 2>&1; then
+              echo "⚠️  Migration failed - checking for schema conflicts..."
+              
+              # Check if it's a column mismatch error
+              if docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate 2>&1 | grep -q "does not exist"; then
+                echo "🔄 Detected schema conflict - rebuilding database..."
+                
+                # Stop services
+                docker-compose -f ${COMPOSE_FILE} down
+                
+                # Remove database volume only
+                docker volume rm mlops_postgres_data || true
+                
+                # Restart services
+                docker-compose -f ${COMPOSE_FILE} up -d
+                
+                # Wait for DB to be ready
+                sleep 20
+                
+                # Run migrations on fresh database
+                docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py makemigrations predictions || true
+                docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate
+                
+                echo "✅ Database rebuilt with correct schema"
+              else
+                echo "❌ Migration failed for unknown reason"
+                exit 1
+              fi
+            else
+              echo "✅ Migrations applied successfully"
+            fi
+          '''
+        }
+      }
+    }
+
+    stage('Update Nginx Config') {
+      steps {
+        dir(env.WORKDIR) {
+          sh '''
+            set -e
+            echo "Updating Nginx configuration..."
+            # Copy nginx.conf to a temp location that Jenkins can access
+            cp nginx.conf /tmp/dogbreed-nginx.conf
+            echo "✅ Nginx config updated in /tmp/dogbreed-nginx.conf"
+            echo "⚠️  Manual step: Run 'sudo cp /tmp/dogbreed-nginx.conf /etc/nginx/sites-available/dogbreed.conf && sudo systemctl reload nginx'"
           '''
         }
       }
