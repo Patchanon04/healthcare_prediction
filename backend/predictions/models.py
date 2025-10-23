@@ -1,13 +1,41 @@
 """
-Database models for dog breed predictions.
+Database models for medical diagnosis predictions.
 """
 import uuid
 from django.db import models
+from django.contrib.auth.models import User
+
+
+class UserProfile(models.Model):
+    """
+    Extended user profile for medical professionals.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    full_name = models.CharField(max_length=255, blank=True)
+    contact = models.CharField(max_length=50, blank=True)
+    role = models.CharField(
+        max_length=20,
+        choices=[
+            ('doctor', 'Doctor'),
+            ('nurse', 'Nurse'),
+            ('specialist', 'Specialist'),
+            ('researcher', 'Researcher'),
+        ],
+        default='doctor'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'user_profiles'
+
+    def __str__(self):
+        return f"{self.user.username} - {self.role}"
 
 
 class Transaction(models.Model):
     """
-    Model to store dog breed prediction transactions.
+    Model to store medical diagnosis prediction transactions.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     image_url = models.URLField(max_length=500)

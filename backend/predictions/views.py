@@ -1,5 +1,5 @@
 """
-API views for dog breed predictions.
+API views for medical diagnosis predictions.
 """
 import time
 import os
@@ -16,12 +16,13 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.authtoken.models import Token
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-from .models import Transaction
+from .models import Transaction, UserProfile
 from .serializers import (
     TransactionSerializer,
     UploadImageSerializer,
     RegisterSerializer,
     LoginSerializer,
+    UserProfileSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -223,6 +224,8 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
+        # Create user profile
+        UserProfile.objects.create(user=user)
         token, _ = Token.objects.get_or_create(user=user)
         return Response({
             'token': token.key,
@@ -250,3 +253,23 @@ def login(request):
 def me(request):
     user = request.user
     return Response({'username': user.username, 'email': user.email})
+
+
+@api_view(['GET', 'PUT'])
+def profile(request):
+    """
+    Get or update user profile.
+    """
+    # Get or create profile
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
+    
+    if request.method == 'GET':
+        serializer = UserProfileSerializer(profile)
+        return Response(serializer.data)
+    
+    elif request.method == 'PUT':
+        serializer = UserProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

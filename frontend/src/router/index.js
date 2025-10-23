@@ -4,6 +4,7 @@ import RegisterView from '../views/RegisterView.vue'
 import HomeView from '../views/HomeView.vue'
 import PredictView from '../views/PredictView.vue'
 import ResultView from '../views/ResultView.vue'
+import ProfileView from '../views/ProfileView.vue'
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -12,6 +13,7 @@ const routes = [
   { path: '/home', name: 'Home', component: HomeView },
   { path: '/predict', name: 'Predict', component: PredictView },
   { path: '/result/:id', name: 'Result', component: ResultView, props: true },
+  { path: '/profile', name: 'Profile', component: ProfileView },
 ]
 
 const router = createRouter({

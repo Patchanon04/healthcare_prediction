@@ -1,8 +1,8 @@
 """
-Serializers for dog breed predictions API.
+Serializers for medical diagnosis predictions API.
 """
 from rest_framework import serializers
-from .models import Transaction
+from .models import Transaction, UserProfile
 from django.contrib.auth.models import User
 
 
@@ -77,3 +77,27 @@ class LoginSerializer(serializers.Serializer):
     """Serializer for user login."""
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """Serializer for user profile."""
+    username = serializers.CharField(source='user.username', read_only=True)
+    email = serializers.EmailField(source='user.email')
+    
+    class Meta:
+        model = UserProfile
+        fields = ['username', 'email', 'full_name', 'contact', 'role', 'created_at', 'updated_at']
+        read_only_fields = ['username', 'created_at', 'updated_at']
+    
+    def update(self, instance, validated_data):
+        # Update user email if provided
+        user_data = validated_data.pop('user', {})
+        if 'email' in user_data:
+            instance.user.email = user_data['email']
+            instance.user.save()
+        
+        # Update profile fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
