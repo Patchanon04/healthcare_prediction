@@ -14,6 +14,10 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   config => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers['Authorization'] = `Token ${token}`
+    }
     return config
   },
   error => {
@@ -35,9 +39,13 @@ api.interceptors.response.use(
  * @param {File} imageFile - The image file to upload
  * @returns {Promise} - Promise with prediction result
  */
-export const uploadImage = async (imageFile) => {
+export const uploadImage = async (imageFile, patient) => {
   const formData = new FormData()
   formData.append('image', imageFile)
+  formData.append('patient_name', patient.patient_name)
+  formData.append('age', patient.age)
+  formData.append('gender', patient.gender)
+  formData.append('mrn', patient.mrn)
   
   const response = await api.post('/api/v1/upload/', formData, {
     headers: {
@@ -62,12 +70,33 @@ export const getHistory = async (page = 1, pageSize = 10) => {
   return response.data
 }
 
+export const getTransaction = async (id) => {
+  const response = await api.get(`/api/v1/history/${id}/`)
+  return response.data
+}
+
 /**
  * Check backend health status
  * @returns {Promise} - Promise with health status
  */
 export const checkHealth = async () => {
   const response = await api.get('/api/v1/health/')
+  return response.data
+}
+
+// Auth APIs
+export const register = async ({ username, password, email }) => {
+  const response = await api.post('/api/v1/auth/register/', { username, password, email })
+  return response.data
+}
+
+export const login = async ({ username, password }) => {
+  const response = await api.post('/api/v1/auth/login/', { username, password })
+  return response.data
+}
+
+export const me = async () => {
+  const response = await api.get('/api/v1/auth/me/')
   return response.data
 }
 

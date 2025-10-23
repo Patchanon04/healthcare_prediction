@@ -8,14 +8,21 @@ import requests
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import connection
-from rest_framework import status, generics
-from rest_framework.decorators import api_view
+from django.contrib.auth import authenticate
+from rest_framework import status, generics, permissions
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.authtoken.models import Token
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from .models import Transaction
-from .serializers import TransactionSerializer, UploadImageSerializer
+from .serializers import (
+    TransactionSerializer,
+    UploadImageSerializer,
+    RegisterSerializer,
+    LoginSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +43,7 @@ class DefaultPagination(PageNumberPagination):
 )
 def call_ml_service(image_url: str) -> dict:
     """
-    Call ML microservice for breed prediction with retry logic.
+    Call ML microservice for prediction with retry logic.
     
     Args:
         image_url: URL of the image to predict
@@ -83,6 +90,10 @@ def upload_image(request):
         )
     
     image_file = serializer.validated_data['image']
+    patient_name = serializer.validated_data['patient_name']
+    age = serializer.validated_data['age']
+    gender = serializer.validated_data['gender']
+    mrn = serializer.validated_data['mrn']
     
     try:
         # Upload to S3 or local storage
@@ -107,13 +118,23 @@ def upload_image(request):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
         
+        # Map ML response to our schema
+        ml_diagnosis = prediction_result.get('diagnosis') or prediction_result.get('breed')
+        ml_confidence = prediction_result.get('confidence')
+        ml_model_version = prediction_result.get('model_version')
+        ml_processing_time = prediction_result.get('processing_time')
+
         # Save transaction to database
         transaction = Transaction.objects.create(
             image_url=image_url,
-            breed=prediction_result['breed'],
-            confidence=prediction_result['confidence'],
-            model_version=prediction_result['model_version'],
-            processing_time=prediction_result['processing_time']
+            diagnosis=ml_diagnosis,
+            confidence=ml_confidence,
+            model_version=ml_model_version,
+            processing_time=ml_processing_time,
+            patient_name=patient_name,
+            age=age,
+            gender=gender,
+            mrn=mrn,
         )
         
         total_time = round(time.time() - start_time, 2)
@@ -148,7 +169,14 @@ class TransactionHistoryView(generics.ListAPIView):
     pagination_class = DefaultPagination
 
 
+class TransactionDetailView(generics.RetrieveAPIView):
+    """Retrieve a single transaction by id."""
+    queryset = Transaction.objects.all()
+    serializer_class = TransactionSerializer
+
+
 @api_view(['GET'])
+@permission_classes([permissions.AllowAny])
 def health_check(request):
     """
     Health check endpoint.
@@ -186,3 +214,39 @@ def health_check(request):
     
     response_status = status.HTTP_200_OK if health_status["status"] == "ok" else status.HTTP_503_SERVICE_UNAVAILABLE
     return Response(health_status, status=response_status)
+
+
+# Authentication Endpoints
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def register(request):
+    serializer = RegisterSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({
+            'token': token.key,
+            'username': user.username,
+            'email': user.email,
+        }, status=status.HTTP_201_CREATED)
+    return Response({'error': 'Invalid data', 'details': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def login(request):
+    serializer = LoginSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = authenticate(username=serializer.validated_data['username'], password=serializer.validated_data['password'])
+    if not user:
+        return Response({'error': 'Invalid username or password'}, status=status.HTTP_401_UNAUTHORIZED)
+    token, _ = Token.objects.get_or_create(user=user)
+    return Response({'token': token.key, 'username': user.username, 'email': user.email})
+
+
+@api_view(['GET'])
+def me(request):
+    user = request.user
+    return Response({'username': user.username, 'email': user.email})

@@ -29,10 +29,10 @@
 
       <!-- Prediction Results -->
       <div class="space-y-6">
-        <!-- Breed -->
+        <!-- Diagnosis -->
         <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 text-center">
-          <p class="text-sm text-gray-600 mb-2">Detected Breed</p>
-          <p class="text-3xl font-bold text-gray-800">{{ prediction.breed }}</p>
+          <p class="text-sm text-gray-600 mb-2">Detected Diagnosis</p>
+          <p class="text-3xl font-bold text-gray-800">{{ prediction.diagnosis }}</p>
         </div>
 
         <!-- Confidence -->

@@ -107,6 +107,13 @@ import { uploadImage } from '../services/api'
 
 export default {
   name: 'UploadForm',
+  props: {
+    patient: {
+      type: Object,
+      required: false,
+      default: () => ({})
+    }
+  },
   emits: ['upload-success', 'upload-error'],
   setup(props, { emit }) {
     const fileInput = ref(null)
@@ -181,7 +188,15 @@ export default {
       isLoading.value = true
 
       try {
-        const result = await uploadImage(selectedFile.value)
+        // minimal patient validation if provided
+        const p = props.patient || {}
+        const required = ['patient_name', 'age', 'gender', 'mrn']
+        for (const key of required) {
+          if (p[key] === undefined || p[key] === null || p[key] === '') {
+            throw new Error('Please fill patient information completely')
+          }
+        }
+        const result = await uploadImage(selectedFile.value, p)
         emit('upload-success', result)
         clearImage()
       } catch (error) {
