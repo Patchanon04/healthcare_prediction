@@ -9,7 +9,7 @@ pipeline {
     // โฟลเดอร์ทำงานของ pipeline (root ของ repo)
     WORKDIR = '.'
     // ใช้ชื่อโปรเจกต์คงที่เพื่อให้ down/up กระทบ stack เดียวกันเสมอ
-    COMPOSE_PROJECT_NAME = 'dogbreed'
+    COMPOSE_PROJECT_NAME = 'medml'
     // ชี้ไปยังไฟล์ .env ของ production บน EC2 (ปรับได้ตามที่วางไฟล์จริง)
     ENV_FILE = '/home/ubuntu/MLOPs/.env'
   }
@@ -53,7 +53,7 @@ pipeline {
               docker-compose $ENV_ARG -f ${COMPOSE_FILE} down -v --remove-orphans || true
 
               # Safety net: remove any lingering named containers from older runs
-              docker rm -f dogbreed_backend dogbreed_frontend dogbreed_db dogbreed_ml_service 2>/dev/null || true
+              docker rm -f medml_backend medml_frontend medml_db medml_ml_service 2>/dev/null || true
 
               # Build without --pull so it uses local cache/base images if present
               docker-compose $ENV_ARG -f ${COMPOSE_FILE} build

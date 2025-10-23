@@ -1,6 +1,6 @@
 <template>
   <div class="bg-white rounded-lg shadow-lg p-8 max-w-2xl mx-auto">
-    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Upload Dog Image</h2>
+    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Upload Medical Image</h2>
     
     <form @submit.prevent="handleSubmit" class="space-y-6">
       <!-- Image Preview -->
@@ -47,7 +47,7 @@
           <div class="text-6xl">📸</div>
           <div>
             <p class="text-lg text-gray-600 mb-2">
-              Drag and drop your dog image here
+              Drag and drop your medical image here
             </p>
             <p class="text-sm text-gray-500 mb-4">or</p>
             <button

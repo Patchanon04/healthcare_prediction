@@ -15,7 +15,7 @@
     <div v-else-if="!transactions.length" class="text-center py-12">
       <div class="text-6xl mb-4">📋</div>
       <p class="text-xl text-gray-600 mb-2">No predictions yet</p>
-      <p class="text-gray-500">Upload an image to start predicting dog breeds!</p>
+      <p class="text-gray-500">Upload an image to start making medical diagnoses!</p>
     </div>
 
     <!-- History Table -->

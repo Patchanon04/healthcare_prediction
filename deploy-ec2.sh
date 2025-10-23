@@ -13,7 +13,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}🚀 Dog Breed Prediction - EC2 Deployment${NC}"
+echo -e "${GREEN}🚀 Medical Diagnosis System - EC2 Deployment${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
@@ -176,9 +176,9 @@ fi
 # ============================================
 echo -e "${GREEN}⚙️  Step 12: Setting up auto-start on reboot...${NC}"
 
-sudo tee /etc/systemd/system/dogbreed.service > /dev/null <<EOF
+sudo tee /etc/systemd/system/medml.service > /dev/null <<EOF
 [Unit]
-Description=Dog Breed Prediction Service
+Description=Medical Diagnosis System Service
 Requires=docker.service
 After=docker.service
 
@@ -195,7 +195,7 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable dogbreed.service
+sudo systemctl enable medml.service
 echo -e "${GREEN}✅ Auto-start configured${NC}"
 
 # ============================================
