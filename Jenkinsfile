@@ -48,8 +48,9 @@ pipeline {
                 exit 1
               fi
 
-              # Stop previous stack (same project name) and remove orphans
-              docker-compose $ENV_ARG -f ${COMPOSE_FILE} down --remove-orphans || true
+              # Stop previous stack (same project name) and remove orphans + volumes
+              # This ensures fresh database schema on every deploy
+              docker-compose $ENV_ARG -f ${COMPOSE_FILE} down -v --remove-orphans || true
 
               # Safety net: remove any lingering named containers from older runs
               docker rm -f dogbreed_backend dogbreed_frontend dogbreed_db dogbreed_ml_service 2>/dev/null || true
@@ -69,55 +70,11 @@ pipeline {
       steps {
         dir(env.WORKDIR) {
           sh '''
-            # Don't exit on error immediately - we want to handle migration failures
-            set +e
-            
-            # Try makemigrations first
-            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py makemigrations predictions
-            
-            # Try to run migrations and capture output
-            MIGRATE_OUTPUT=$(docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate 2>&1)
-            MIGRATE_EXIT=$?
-            
-            if [ $MIGRATE_EXIT -ne 0 ]; then
-              echo "⚠️  Migration failed with output:"
-              echo "$MIGRATE_OUTPUT"
-              
-              # Check if it's a schema conflict (column/relation does not exist)
-              if echo "$MIGRATE_OUTPUT" | grep -q "does not exist"; then
-                echo "🔄 Detected schema conflict - rebuilding database..."
-                
-                # Stop services
-                docker-compose -f ${COMPOSE_FILE} down
-                
-                # Remove database volume only
-                docker volume rm mlops_postgres_data || true
-                
-                # Restart services
-                docker-compose -f ${COMPOSE_FILE} up -d
-                
-                # Wait for DB to be ready
-                echo "Waiting for database to be ready..."
-                sleep 30
-                
-                # Run migrations on fresh database
-                echo "Running migrations on fresh database..."
-                docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py makemigrations predictions || true
-                docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate
-                
-                if [ $? -eq 0 ]; then
-                  echo "✅ Database rebuilt with correct schema"
-                else
-                  echo "❌ Migration still failed after rebuild"
-                  exit 1
-                fi
-              else
-                echo "❌ Migration failed for unknown reason"
-                exit 1
-              fi
-            else
-              echo "✅ Migrations applied successfully"
-            fi
+            set -e
+            echo "Running database migrations on fresh database..."
+            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py makemigrations predictions || true
+            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate
+            echo "✅ Migrations completed"
           '''
         }
       }
