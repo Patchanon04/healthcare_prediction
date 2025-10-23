@@ -69,14 +69,22 @@ pipeline {
       steps {
         dir(env.WORKDIR) {
           sh '''
-            set -e
+            # Don't exit on error immediately - we want to handle migration failures
+            set +e
             
-            # Try to run migrations
-            if ! docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate 2>&1; then
-              echo "⚠️  Migration failed - checking for schema conflicts..."
+            # Try makemigrations first
+            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py makemigrations predictions
+            
+            # Try to run migrations and capture output
+            MIGRATE_OUTPUT=$(docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate 2>&1)
+            MIGRATE_EXIT=$?
+            
+            if [ $MIGRATE_EXIT -ne 0 ]; then
+              echo "⚠️  Migration failed with output:"
+              echo "$MIGRATE_OUTPUT"
               
-              # Check if it's a column mismatch error
-              if docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate 2>&1 | grep -q "does not exist"; then
+              # Check if it's a schema conflict (column/relation does not exist)
+              if echo "$MIGRATE_OUTPUT" | grep -q "does not exist"; then
                 echo "🔄 Detected schema conflict - rebuilding database..."
                 
                 # Stop services
@@ -89,13 +97,20 @@ pipeline {
                 docker-compose -f ${COMPOSE_FILE} up -d
                 
                 # Wait for DB to be ready
-                sleep 20
+                echo "Waiting for database to be ready..."
+                sleep 30
                 
                 # Run migrations on fresh database
+                echo "Running migrations on fresh database..."
                 docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py makemigrations predictions || true
                 docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate
                 
-                echo "✅ Database rebuilt with correct schema"
+                if [ $? -eq 0 ]; then
+                  echo "✅ Database rebuilt with correct schema"
+                else
+                  echo "❌ Migration still failed after rebuild"
+                  exit 1
+                fi
               else
                 echo "❌ Migration failed for unknown reason"
                 exit 1
