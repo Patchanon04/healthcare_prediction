@@ -140,6 +140,7 @@ sleep 30
 # Step 10: Run Migrations
 # ============================================
 echo -e "${GREEN}📊 Step 10: Running database migrations...${NC}"
+docker-compose -f docker-compose.prod.yml exec -T backend python manage.py makemigrations predictions
 docker-compose -f docker-compose.prod.yml exec -T backend python manage.py migrate
 
 # ============================================
