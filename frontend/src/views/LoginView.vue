@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-[#E9F7FB] via-[#D4EEF5] to-[#7CC6D2] flex items-center justify-center p-6">
+  <div class="min-h-screen bg-gradient-to-br from-[#00BCD4] via-[#4DD0E1] to-[#80DEEA] flex items-center justify-center p-6">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex">
       <!-- Left Side - Login Form -->
       <div class="w-full md:w-1/2 p-12">
@@ -61,34 +61,90 @@
       </div>
 
       <!-- Right Side - Medical Illustration -->
-      <div class="hidden md:flex md:w-1/2 bg-gradient-to-br from-[#7CC6D2] to-[#5AB4C4] items-center justify-center p-12">
-        <div class="text-center">
-          <!-- Doctor Illustration (SVG) -->
+      <div class="hidden md:flex md:w-1/2 bg-gradient-to-br from-[#00BCD4] to-[#26C6DA] items-center justify-center p-12 relative overflow-hidden">
+        <!-- Background decorative elements -->
+        <div class="absolute inset-0 opacity-10">
+          <div class="absolute top-20 right-20 w-64 h-64 bg-white rounded-full"></div>
+          <div class="absolute bottom-10 left-10 w-48 h-48 bg-white rounded-full"></div>
+        </div>
+        
+        <div class="relative z-10 text-center">
+          <!-- Colorful Brain & Doctors Illustration -->
           <div class="mb-6">
-            <svg class="w-64 h-64 mx-auto" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- Doctor 1 -->
-              <circle cx="70" cy="60" r="20" fill="#2C597D"/>
-              <rect x="50" y="85" width="40" height="60" rx="8" fill="white"/>
-              <rect x="55" y="90" width="30" height="3" fill="#7CC6D2"/>
-              <circle cx="65" cy="100" r="2" fill="#E74C3C"/>
+            <svg class="w-80 h-80 mx-auto" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Colorful Brain -->
+              <g transform="translate(180, 40)">
+                <!-- Brain outline -->
+                <path d="M 50 20 Q 80 10 90 30 Q 100 20 110 35 Q 115 25 120 40 Q 120 60 115 75 Q 110 85 100 90 Q 85 95 70 90 Q 55 85 45 75 Q 35 60 40 40 Q 42 28 50 20 Z" fill="#FFA726" opacity="0.9"/>
+                <path d="M 55 25 Q 70 20 80 30 Q 88 25 95 35 Q 100 45 98 60 Q 95 70 85 75 Q 75 78 65 75 Q 55 70 50 60 Q 48 45 55 25 Z" fill="#FF6B9D" opacity="0.8"/>
+                <path d="M 70 30 Q 80 28 88 38 Q 92 48 90 58 Q 87 65 78 68 Q 70 70 63 65 Q 58 58 60 48 Q 62 38 70 30 Z" fill="#AB47BC" opacity="0.8"/>
+                <path d="M 75 40 Q 82 38 87 45 Q 90 52 87 58 Q 83 62 76 62 Q 70 60 68 53 Q 67 46 75 40 Z" fill="#5C6BC0" opacity="0.9"/>
+                <path d="M 65 45 Q 70 43 74 48 Q 76 53 73 57 Q 70 59 66 57 Q 63 54 64 49 Q 64 46 65 45 Z" fill="#26C6DA" opacity="0.9"/>
+                <path d="M 80 48 Q 84 47 87 51 Q 88 55 85 58 Q 82 59 79 57 Q 77 54 78 51 Q 78 49 80 48 Z" fill="#66BB6A" opacity="0.9"/>
+                
+                <!-- Brain connection lines -->
+                <path d="M 80 70 Q 85 75 90 80" stroke="#00BCD4" stroke-width="3" fill="none" opacity="0.6"/>
+                <path d="M 75 72 Q 78 78 80 85" stroke="#00BCD4" stroke-width="2.5" fill="none" opacity="0.6"/>
+              </g>
               
-              <!-- Doctor 2 -->
-              <circle cx="130" cy="70" r="18" fill="#2C597D"/>
-              <rect x="112" y="92" width="36" height="55" rx="8" fill="white"/>
-              <rect x="117" y="97" width="26" height="3" fill="#7CC6D2"/>
+              <!-- Doctor 1 (Male) -->
+              <g transform="translate(30, 120)">
+                <!-- Head -->
+                <circle cx="35" cy="30" r="18" fill="#8D6E63"/>
+                <!-- Hair -->
+                <path d="M 20 25 Q 25 15 35 15 Q 45 15 50 25" fill="#5D4037"/>
+                <!-- Body (white coat) -->
+                <rect x="15" y="50" width="40" height="70" rx="8" fill="white"/>
+                <!-- Shirt -->
+                <rect x="20" y="55" width="30" height="20" fill="#00897B"/>
+                <!-- Coat details -->
+                <line x1="35" y1="55" x2="35" y2="115" stroke="#00BCD4" stroke-width="2"/>
+                <circle cx="30" cy="65" r="2" fill="#00BCD4"/>
+                <circle cx="40" cy="65" r="2" fill="#00BCD4"/>
+                <!-- Arms -->
+                <rect x="10" y="60" width="8" height="40" rx="4" fill="#8D6E63"/>
+                <rect x="52" y="60" width="8" height="40" rx="4" fill="#8D6E63"/>
+                <!-- Pants -->
+                <rect x="18" y="115" width="15" height="35" fill="#00897B"/>
+                <rect x="37" y="115" width="15" height="35" fill="#00897B"/>
+                <!-- Shoes -->
+                <ellipse cx="25" cy="152" rx="8" ry="4" fill="white"/>
+                <ellipse cx="45" cy="152" rx="8" ry="4" fill="white"/>
+              </g>
               
-              <!-- Medical Cross -->
-              <rect x="95" y="150" width="10" height="30" rx="2" fill="white"/>
-              <rect x="85" y="160" width="30" height="10" rx="2" fill="white"/>
-              
-              <!-- Stethoscope -->
-              <path d="M 60 120 Q 65 130 70 120" stroke="white" stroke-width="3" fill="none"/>
-              <circle cx="60" cy="120" r="4" fill="white"/>
-              <circle cx="70" cy="120" r="4" fill="white"/>
+              <!-- Doctor 2 (Female) -->
+              <g transform="translate(110, 130)">
+                <!-- Head -->
+                <circle cx="30" cy="25" r="16" fill="#D4A574"/>
+                <!-- Hair -->
+                <path d="M 15 20 Q 20 10 30 10 Q 40 10 45 20 L 45 35 Q 42 40 38 42 L 35 45 Q 33 48 30 48 Q 27 48 25 45 L 22 42 Q 18 40 15 35 Z" fill="#6D4C41"/>
+                <!-- Body (white coat) -->
+                <rect x="12" y="42" width="36" height="60" rx="8" fill="white"/>
+                <!-- Dress/Shirt -->
+                <rect x="15" y="47" width="30" height="25" fill="#1976D2"/>
+                <!-- Coat details -->
+                <line x1="30" y1="47" x2="30" y2="98" stroke="#00BCD4" stroke-width="2"/>
+                <circle cx="24" cy="55" r="2" fill="#00BCD4"/>
+                <circle cx="36" cy="55" r="2" fill="#00BCD4"/>
+                <!-- Arms -->
+                <rect x="7" y="50" width="7" height="35" rx="3" fill="#D4A574"/>
+                <rect x="46" y="50" width="7" height="35" rx="3" fill="#D4A574"/>
+                <!-- Holding tablet -->
+                <rect x="45" y="70" width="15" height="20" rx="2" fill="#455A64"/>
+                <rect x="47" y="72" width="11" height="16" fill="#B3E5FC"/>
+                <!-- Skirt -->
+                <path d="M 15 98 L 12 120 L 48 120 L 45 98 Z" fill="#1976D2"/>
+                <!-- Legs -->
+                <rect x="18" y="118" width="8" height="25" fill="#D4A574"/>
+                <rect x="34" y="118" width="8" height="25" fill="#D4A574"/>
+                <!-- Shoes -->
+                <ellipse cx="22" cy="145" rx="6" ry="3" fill="#5E35B1"/>
+                <ellipse cx="38" cy="145" rx="6" ry="3" fill="#5E35B1"/>
+              </g>
             </svg>
           </div>
           <h3 class="text-2xl font-bold text-white mb-2">Welcome Back!</h3>
-          <p class="text-white/90">Access your medical diagnosis system</p>
+          <p class="text-white/90">AI-Powered Medical Diagnosis System</p>
         </div>
       </div>
     </div>

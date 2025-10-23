@@ -4,12 +4,12 @@
       <div class="bg-white rounded-2xl shadow-lg p-8">
         <!-- Profile Header -->
         <div class="flex items-center space-x-6 mb-8 pb-6 border-b border-gray-200">
-          <div class="w-24 h-24 rounded-full bg-gradient-to-br from-[#7CC6D2] to-[#5AB4C4] flex items-center justify-center text-white text-3xl font-bold">
-            {{ (user?.username || 'D').charAt(0).toUpperCase() }}
+          <div class="w-24 h-24 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] flex items-center justify-center text-white text-3xl font-bold">
+            {{ (profile?.full_name || profile?.username || 'U').charAt(0).toUpperCase() }}
           </div>
           <div>
-            <h2 class="text-2xl font-bold text-[#2C597D]">Dr. {{ user?.username || 'User' }}</h2>
-            <p class="text-gray-500">Medical Professional</p>
+            <h2 class="text-2xl font-bold text-[#2C597D]">{{ profile?.full_name || profile?.username || 'User' }}</h2>
+            <p class="text-gray-500 capitalize">{{ profile?.role || 'Medical Professional' }}</p>
             <p class="text-sm text-gray-400 mt-1">Member since {{ new Date().getFullYear() }}</p>
           </div>
         </div>
@@ -94,7 +94,7 @@
             <button 
               type="submit"
               :disabled="loading"
-              class="flex-1 bg-gradient-to-r from-[#7CC6D2] to-[#5AB4C4] text-white rounded-xl py-3 font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              class="flex-1 bg-gradient-to-r from-[#00BCD4] to-[#00ACC1] text-white rounded-xl py-3 font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {{ loading ? 'Saving...' : 'Save Changes' }}
             </button>
@@ -116,14 +116,14 @@
 import { ref, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
 import AppShell from '../components/AppShell.vue'
-import { me, getProfile, updateProfile } from '../services/api'
+import { updateProfile } from '../services/api'
+import { userStore } from '../store/user'
 
 export default {
   name: 'ProfileView',
   components: { AppShell },
   setup() {
     const toast = useToast()
-    const user = ref(null)
     const loading = ref(false)
     const form = ref({
       full_name: '',
@@ -132,13 +132,13 @@ export default {
       role: 'doctor'
     })
 
-    const fetchUser = async () => {
+    const fetchProfile = async () => {
       try {
-        user.value = await me()
-        const profile = await getProfile()
+        await userStore.fetchProfile()
+        const profile = userStore.profile
         // Populate form with profile data
         form.value.full_name = profile.full_name || ''
-        form.value.email = profile.email || user.value.email || ''
+        form.value.email = profile.email || ''
         form.value.contact = profile.contact || ''
         form.value.role = profile.role || 'doctor'
       } catch (e) {
@@ -150,6 +150,8 @@ export default {
       loading.value = true
       try {
         await updateProfile(form.value)
+        // Update store with new data
+        userStore.profile = { ...userStore.profile, ...form.value }
         toast.success('Profile updated successfully!')
       } catch (e) {
         toast.error('Failed to update profile')
@@ -159,13 +161,13 @@ export default {
     }
 
     const handleCancel = () => {
-      fetchUser() // Reset form
+      fetchProfile() // Reset form
       toast.info('Changes cancelled')
     }
 
-    onMounted(fetchUser)
+    onMounted(fetchProfile)
 
-    return { user, form, loading, handleSave, handleCancel }
+    return { profile: userStore.profile, form, loading, handleSave, handleCancel }
   }
 }
 </script>
