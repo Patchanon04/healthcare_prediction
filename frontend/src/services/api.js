@@ -14,9 +14,9 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   config => {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem('token')
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`
+      config.headers['Authorization'] = `Token ${token}`
     }
     return config
   },
@@ -106,14 +106,7 @@ export const getProfile = async () => {
 }
 
 export const updateProfile = async (profileData) => {
-  // Check if profileData is FormData (for avatar upload)
-  const isFormData = profileData instanceof FormData
-  
-  const response = await api.put('/api/v1/auth/profile/', profileData, {
-    headers: isFormData ? {
-      'Content-Type': 'multipart/form-data',
-    } : {}
-  })
+  const response = await api.put('/api/v1/auth/profile/', profileData)
   return response.data
 }
 

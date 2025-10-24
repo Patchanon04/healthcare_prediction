@@ -82,8 +82,7 @@ export default {
       loading.value = true
       try {
         const data = await login({ username: username.value, password: password.value })
-        localStorage.setItem('access_token', data.access)
-        localStorage.setItem('refresh_token', data.refresh)
+        localStorage.setItem('token', data.token)
         toast.success('Welcome!')
         window.location.href = '/home'
       } catch (e) {

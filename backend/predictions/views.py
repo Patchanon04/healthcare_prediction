@@ -3,17 +3,18 @@ API views for medical diagnosis predictions.
 """
 import time
 import os
-import logging
 import requests
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import connection
 from django.contrib.auth import authenticate
-from rest_framework import status, generics, permissions
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework import generics, status, permissions
+from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
+from rest_framework.authtoken.models import Token
 from rest_framework.pagination import PageNumberPagination
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.authtoken.models import Token
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from .models import Transaction, UserProfile
@@ -294,13 +295,11 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
-        # Profile is created in serializer.create()
-        
-        # Generate JWT tokens
-        refresh = RefreshToken.for_user(user)
+        # Create user profile
+        UserProfile.objects.create(user=user)
+        token, _ = Token.objects.get_or_create(user=user)
         return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
+            'token': token.key,
             'username': user.username,
             'email': user.email,
         }, status=status.HTTP_201_CREATED)
@@ -317,15 +316,8 @@ def login(request):
     user = authenticate(username=serializer.validated_data['username'], password=serializer.validated_data['password'])
     if not user:
         return Response({'error': 'Invalid username or password'}, status=status.HTTP_401_UNAUTHORIZED)
-    
-    # Generate JWT tokens
-    refresh = RefreshToken.for_user(user)
-    return Response({
-        'access': str(refresh.access_token),
-        'refresh': str(refresh),
-        'username': user.username,
-        'email': user.email
-    })
+    token, _ = Token.objects.get_or_create(user=user)
+    return Response({'token': token.key, 'username': user.username, 'email': user.email})
 
 
 @api_view(['GET'])
@@ -334,10 +326,12 @@ def me(request):
     return Response({'username': user.username, 'email': user.email})
 
 
-@api_view(['GET', 'PUT'])
+@api_view(['GET', 'PUT', 'PATCH'])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
 def profile(request):
     """
     Get or update user profile.
+    Supports multipart/form-data for avatar upload.
     """
     # Get or create profile
     profile, created = UserProfile.objects.get_or_create(user=request.user)
@@ -346,7 +340,7 @@ def profile(request):
         serializer = UserProfileSerializer(profile)
         return Response(serializer.data)
     
-    elif request.method == 'PUT':
+    elif request.method in ['PUT', 'PATCH']:
         serializer = UserProfileSerializer(profile, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()

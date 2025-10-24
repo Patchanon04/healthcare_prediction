@@ -142,7 +142,7 @@
 <script>
 import { ref } from 'vue'
 import { useToast } from 'vue-toastification'
-import { register } from '../services/api'
+import { register, updateProfile } from '../services/api'
 
 export default {
   name: 'RegisterView',
@@ -163,17 +163,21 @@ export default {
       }
       loading.value = true
       try {
-        // Register user with all profile info
+        // Register user
         const data = await register({ 
           username: username.value, 
           email: email.value, 
-          password: password.value,
+          password: password.value 
+        })
+        localStorage.setItem('token', data.token)
+        
+        // Update profile with additional info
+        await updateProfile({
           full_name: fullName.value,
+          email: email.value,
           contact: contact.value,
           role: role.value
         })
-        localStorage.setItem('access_token', data.access)
-        localStorage.setItem('refresh_token', data.refresh)
         
         toast.success('Account created successfully!')
         window.location.href = '/home'
