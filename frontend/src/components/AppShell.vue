@@ -45,15 +45,18 @@
           
           <!-- User Profile -->
           <div class="flex items-center space-x-4">
-            <div class="flex items-center space-x-3">
+            <router-link to="/profile" class="flex items-center space-x-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition group">
               <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] flex items-center justify-center text-white font-semibold">
                 {{ (profile?.full_name || profile?.username || 'U').charAt(0).toUpperCase() }}
               </div>
               <div class="text-sm">
-                <div class="font-semibold text-[#2C597D]">{{ profile?.full_name || profile?.username || 'User' }}</div>
+                <div class="font-semibold text-[#2C597D] group-hover:text-[#00BCD4] transition">{{ profile?.full_name || profile?.username || 'User' }}</div>
                 <div class="text-gray-500 text-xs capitalize">{{ profile?.role || 'Medical Professional' }}</div>
               </div>
-            </div>
+              <svg class="w-5 h-5 text-gray-400 group-hover:text-[#00BCD4] transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </router-link>
           </div>
         </div>
       </header>
