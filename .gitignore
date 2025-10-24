@@ -1,7 +1,7 @@
 # Environment variables
 .env
 .env.local
-
+.pem
 # Python
 __pycache__/
 *.py[cod]
