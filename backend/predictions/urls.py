@@ -11,6 +11,7 @@ urlpatterns = [
     path('history/', views.TransactionHistoryView.as_view(), name='history'),
     path('history/<uuid:pk>/', views.TransactionDetailView.as_view(), name='history-detail'),
     path('health/', views.health_check, name='health'),
+    path('seed-accounts/', views.seed_accounts, name='seed-accounts'),
     # auth
     path('auth/register/', views.register, name='register'),
     path('auth/login/', views.login, name='login'),

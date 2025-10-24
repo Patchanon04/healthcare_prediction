@@ -181,48 +181,110 @@ class TransactionHistoryView(generics.ListAPIView):
 class TransactionDetailView(generics.RetrieveAPIView):
     """Retrieve a single transaction by id."""
     queryset = Transaction.objects.all()
-    serializer_class = TransactionSerializer
 
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def health_check(request):
+    """Health check endpoint."""
+    return Response({'status': 'ok'})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def seed_accounts(request):
     """
-    Health check endpoint.
+    Seed database with test accounts.
+    POST /api/v1/seed-accounts/
     
-    GET /api/v1/health/
-    
-    Returns service health status including database connectivity.
-    """
-    health_status = {
-        "status": "ok",
-        "service": "backend",
-        "db": "unknown"
+    Body (optional):
+    {
+        "reset": true
     }
+    """
+    from django.contrib.auth.models import User
     
-    # Check database connection
-    try:
-        connection.ensure_connection()
-        health_status["db"] = "ok"
-    except Exception as e:
-        health_status["status"] = "degraded"
-        health_status["db"] = f"error: {str(e)}"
-        logger.error(f"Database health check failed: {str(e)}")
+    reset = request.data.get('reset', False)
     
-    # Check ML service
-    try:
-        ml_health_url = f"{settings.ML_SERVICE_URL}/health/"
-        response = requests.get(ml_health_url, timeout=5)
-        if response.status_code == 200:
-            health_status["ml_service"] = "ok"
-        else:
-            health_status["ml_service"] = f"error: {response.status_code}"
-    except Exception as e:
-        health_status["ml_service"] = f"error: {str(e)}"
-        logger.error(f"ML service health check failed: {str(e)}")
+    accounts = [
+        {
+            'username': 'doctor1',
+            'password': 'password123',
+            'email': 'doctor1@hospital.com',
+            'full_name': 'Dr. John Smith',
+            'contact': '081-234-5678',
+            'role': 'doctor'
+        },
+        {
+            'username': 'nurse1',
+            'password': 'password123',
+            'email': 'nurse1@hospital.com',
+            'full_name': 'Nurse Jane Doe',
+            'contact': '082-345-6789',
+            'role': 'nurse'
+        },
+        {
+            'username': 'admin1',
+            'password': 'password123',
+            'email': 'admin1@hospital.com',
+            'full_name': 'Admin User',
+            'contact': '083-456-7890',
+            'role': 'admin'
+        },
+        {
+            'username': 'radiologist1',
+            'password': 'password123',
+            'email': 'radiologist1@hospital.com',
+            'full_name': 'Dr. Sarah Johnson',
+            'contact': '084-567-8901',
+            'role': 'radiologist'
+        },
+    ]
     
-    response_status = status.HTTP_200_OK if health_status["status"] == "ok" else status.HTTP_503_SERVICE_UNAVAILABLE
-    return Response(health_status, status=response_status)
+    # Reset if requested
+    if reset:
+        deleted_count = User.objects.filter(username__in=[a['username'] for a in accounts]).delete()[0]
+        if deleted_count > 0:
+            logger.info(f"Deleted {deleted_count} existing accounts")
+    
+    created = []
+    skipped = []
+    
+    for account in accounts:
+        # Check if user already exists
+        if User.objects.filter(username=account['username']).exists():
+            skipped.append(account['username'])
+            continue
+        
+        # Create user
+        user = User.objects.create_user(
+            username=account['username'],
+            password=account['password'],
+            email=account['email']
+        )
+        
+        # Create profile
+        UserProfile.objects.create(
+            user=user,
+            full_name=account['full_name'],
+            contact=account['contact'],
+            role=account['role']
+        )
+        
+        created.append({
+            'username': account['username'],
+            'role': account['role'],
+            'email': account['email']
+        })
+    
+    return Response({
+        'success': True,
+        'created': len(created),
+        'skipped': len(skipped),
+        'accounts': created,
+        'skipped_usernames': skipped,
+        'message': f'Created {len(created)} accounts, skipped {len(skipped)} existing accounts'
+    }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 # Authentication Endpoints

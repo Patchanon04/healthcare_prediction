@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-r from-[#00838F] via-[#26C6DA] to-[#B2EBF2] flex">
+  <div class="min-h-screen bg-gradient-to-br from-[#00838F] via-[#4DD0E1] to-white flex">
     <!-- Sidebar -->
-    <aside class="w-64 bg-gradient-to-r from-[#00838F] to-[#00ACC1] shadow-lg flex flex-col hidden md:flex">
+    <aside class="w-64 bg-gradient-to-b from-[#006064] to-[#00838F] shadow-lg flex flex-col hidden md:flex">
       <!-- Logo/Brand -->
       <div class="p-6 border-b border-white/20">
         <h1 class="text-2xl font-bold text-white">MedML</h1>
@@ -12,23 +12,23 @@
       <nav class="flex-1 p-4 space-y-3">
         <router-link 
           to="/home" 
-          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-white bg-transparent mr-4 border-l-4 border-transparent"
-          active-class="!bg-white !text-[#00838F] !border-l-[#FF6B35]"
+          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-[#00BCD4] bg-white mr-4 border-2 border-transparent"
+          active-class="!text-orange-500 !border-orange-500"
         >
           <span class="font-semibold text-lg">Home</span>
         </router-link>
 
         <router-link 
           to="/predict" 
-          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-white bg-transparent mr-4 border-l-4 border-transparent"
-          active-class="!bg-white !text-[#00838F] !border-l-[#FF6B35]"
+          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-[#00BCD4] bg-white mr-4 border-2 border-transparent"
+          active-class="!text-orange-500 !border-orange-500"
         >
           <span class="font-semibold text-lg">Predict</span>
         </router-link>
 
         <button 
-          @click="logout"
-          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-white bg-transparent mr-4 w-full text-left"
+          @click="confirmLogout"
+          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-[#00BCD4] bg-white mr-4 w-full text-left border-2 border-transparent"
         >
           <span class="font-semibold text-lg">Logout</span>
         </button>
@@ -63,17 +63,48 @@
         <slot />
       </main>
     </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div v-if="showLogoutModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click="showLogoutModal = false">
+      <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4" @click.stop>
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-2">Confirm Logout</h3>
+          <p class="text-gray-600">Are you sure you want to logout?</p>
+        </div>
+        <div class="flex gap-3">
+          <button 
+            @click="showLogoutModal = false"
+            class="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
+          >
+            Cancel
+          </button>
+          <button 
+            @click="logout"
+            class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { userStore } from '../store/user'
 
 export default {
   name: 'AppShell',
   props: { title: { type: String, default: '' } },
   setup() {
+    const showLogoutModal = ref(false)
+
     const fetchProfile = async () => {
       try {
         await userStore.fetchProfile()
@@ -84,6 +115,10 @@ export default {
       }
     }
 
+    const confirmLogout = () => {
+      showLogoutModal.value = true
+    }
+
     const logout = () => {
       userStore.clearProfile()
       localStorage.removeItem('token')
@@ -92,7 +127,7 @@ export default {
 
     onMounted(fetchProfile)
 
-    return { profile: userStore.profile, logout }
+    return { profile: userStore.profile, showLogoutModal, confirmLogout, logout }
   }
 }
 </script>
