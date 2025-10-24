@@ -84,7 +84,7 @@ class LoginSerializer(serializers.Serializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profile."""
     username = serializers.CharField(source='user.username', read_only=True)
-    email = serializers.EmailField(source='user.email', required=False)
+    email = serializers.EmailField(source='user.email')
     avatar = serializers.ImageField(required=False, allow_null=True)
     
     class Meta:

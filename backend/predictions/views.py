@@ -3,16 +3,15 @@ API views for medical diagnosis predictions.
 """
 import time
 import os
+import logging
 import requests
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import connection
 from django.contrib.auth import authenticate
-from rest_framework import generics, status, permissions
-from rest_framework.decorators import api_view, permission_classes, parser_classes
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework import status, generics, permissions
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.authtoken.models import Token
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.authtoken.models import Token
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -326,12 +325,10 @@ def me(request):
     return Response({'username': user.username, 'email': user.email})
 
 
-@api_view(['GET', 'PUT', 'PATCH'])
-@parser_classes([MultiPartParser, FormParser, JSONParser])
+@api_view(['GET', 'PUT'])
 def profile(request):
     """
     Get or update user profile.
-    Supports multipart/form-data for avatar upload.
     """
     # Get or create profile
     profile, created = UserProfile.objects.get_or_create(user=request.user)
@@ -340,7 +337,7 @@ def profile(request):
         serializer = UserProfileSerializer(profile)
         return Response(serializer.data)
     
-    elif request.method in ['PUT', 'PATCH']:
+    elif request.method == 'PUT':
         serializer = UserProfileSerializer(profile, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
