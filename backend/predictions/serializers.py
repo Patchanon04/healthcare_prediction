@@ -61,17 +61,38 @@ class UploadImageSerializer(serializers.Serializer):
 class RegisterSerializer(serializers.ModelSerializer):
     """Serializer for user registration."""
     password = serializers.CharField(write_only=True, min_length=6)
+    full_name = serializers.CharField(required=False, allow_blank=True)
+    contact = serializers.CharField(required=False, allow_blank=True)
+    role = serializers.ChoiceField(
+        choices=['doctor', 'nurse', 'radiologist', 'admin'],
+        default='doctor'
+    )
 
     class Meta:
         model = User
-        fields = ['username', 'password', 'email']
+        fields = ['username', 'password', 'email', 'full_name', 'contact', 'role']
 
     def create(self, validated_data):
+        # Extract profile fields
+        full_name = validated_data.pop('full_name', '')
+        contact = validated_data.pop('contact', '')
+        role = validated_data.pop('role', 'doctor')
+        
+        # Create user
         user = User.objects.create_user(
             username=validated_data['username'],
             password=validated_data['password'],
             email=validated_data.get('email', '')
         )
+        
+        # Create profile with additional info
+        UserProfile.objects.create(
+            user=user,
+            full_name=full_name,
+            contact=contact,
+            role=role
+        )
+        
         return user
 
 

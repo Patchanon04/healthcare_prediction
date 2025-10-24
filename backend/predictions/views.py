@@ -294,8 +294,7 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
-        # Create user profile
-        UserProfile.objects.create(user=user)
+        # Profile is created in serializer.create()
         
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
