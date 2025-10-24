@@ -71,10 +71,17 @@ pipeline {
         dir(env.WORKDIR) {
           sh '''
             set -e
-            echo "Running database migrations on fresh database..."
-            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py makemigrations predictions || true
+            echo "Waiting for services to be ready..."
+            sleep 30
+            
+            echo "Running database migrations..."
+            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py makemigrations
             docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate
-            echo "✅ Migrations completed"
+            
+            echo "Collecting static files..."
+            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py collectstatic --noinput || true
+            
+            echo "✅ Migrations and static files completed"
           '''
         }
       }
