@@ -114,7 +114,8 @@ export default {
         await userStore.fetchProfile()
       } catch (e) {
         // token invalid, redirect to login
-        localStorage.removeItem('token')
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
         window.location.href = '/login'
       }
     }
