@@ -181,6 +181,7 @@ class TransactionHistoryView(generics.ListAPIView):
 class TransactionDetailView(generics.RetrieveAPIView):
     """Retrieve a single transaction by id."""
     queryset = Transaction.objects.all()
+    serializer_class = TransactionSerializer
 
 
 @api_view(['GET'])
