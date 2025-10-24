@@ -128,7 +128,7 @@ def upload_image(request):
 
         # Save transaction to database
         transaction = Transaction.objects.create(
-            user=request.user,
+            user=request.user if request.user.is_authenticated else None,
             image_url=image_url,
             diagnosis=ml_diagnosis,
             confidence=ml_confidence,
@@ -173,7 +173,9 @@ class TransactionHistoryView(generics.ListAPIView):
     
     def get_queryset(self):
         # Filter transactions by current user
-        return Transaction.objects.filter(user=self.request.user).order_by('-uploaded_at')
+        if self.request.user.is_authenticated:
+            return Transaction.objects.filter(user=self.request.user).order_by('-uploaded_at')
+        return Transaction.objects.none()
 
 
 class TransactionDetailView(generics.RetrieveAPIView):

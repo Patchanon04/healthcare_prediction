@@ -38,7 +38,7 @@ class Transaction(models.Model):
     Model to store medical diagnosis prediction transactions.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions', null=True, blank=True)
     image_url = models.URLField(max_length=500)
     diagnosis = models.CharField(max_length=100)
     confidence = models.FloatField()
@@ -49,7 +49,7 @@ class Transaction(models.Model):
     age = models.PositiveIntegerField()
     gender = models.CharField(max_length=1, choices=[('M', 'Male'), ('F', 'Female'), ('O', 'Other')])
     mrn = models.CharField(max_length=100, help_text="Medical Record Number")
-    phone = models.CharField(max_length=20, blank=True, help_text="Patient phone number")
+    phone = models.CharField(max_length=20, blank=True, default='', help_text="Patient phone number")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
