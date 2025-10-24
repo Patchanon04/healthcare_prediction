@@ -125,7 +125,8 @@ export default {
 
     const logout = () => {
       userStore.clearProfile()
-      localStorage.removeItem('token')
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
       window.location.href = '/login'
     }
 

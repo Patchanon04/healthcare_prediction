@@ -169,7 +169,8 @@ export default {
           email: email.value, 
           password: password.value 
         })
-        localStorage.setItem('token', data.token)
+        localStorage.setItem('access_token', data.access)
+        localStorage.setItem('refresh_token', data.refresh)
         
         // Update profile with additional info
         await updateProfile({

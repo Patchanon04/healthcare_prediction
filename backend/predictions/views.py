@@ -13,7 +13,7 @@ from rest_framework import status, generics, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.authtoken.models import Token
+from rest_framework_simplejwt.tokens import RefreshToken
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from .models import Transaction, UserProfile
@@ -296,9 +296,12 @@ def register(request):
         user = serializer.save()
         # Create user profile
         UserProfile.objects.create(user=user)
-        token, _ = Token.objects.get_or_create(user=user)
+        
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
         return Response({
-            'token': token.key,
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
             'username': user.username,
             'email': user.email,
         }, status=status.HTTP_201_CREATED)
@@ -315,8 +318,15 @@ def login(request):
     user = authenticate(username=serializer.validated_data['username'], password=serializer.validated_data['password'])
     if not user:
         return Response({'error': 'Invalid username or password'}, status=status.HTTP_401_UNAUTHORIZED)
-    token, _ = Token.objects.get_or_create(user=user)
-    return Response({'token': token.key, 'username': user.username, 'email': user.email})
+    
+    # Generate JWT tokens
+    refresh = RefreshToken.for_user(user)
+    return Response({
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+        'username': user.username,
+        'email': user.email
+    })
 
 
 @api_view(['GET'])
