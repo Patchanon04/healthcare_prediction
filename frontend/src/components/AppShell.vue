@@ -46,9 +46,10 @@
           <!-- User Profile -->
           <div class="flex items-center space-x-4">
             <router-link to="/profile" class="flex items-center space-x-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition group">
-              <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] flex items-center justify-center text-white font-semibold">
+              <div v-if="!profile?.avatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] flex items-center justify-center text-white font-semibold">
                 {{ (profile?.full_name || profile?.username || 'U').charAt(0).toUpperCase() }}
               </div>
+              <img v-else :src="profile.avatar" class="w-10 h-10 rounded-full object-cover" alt="Profile" />
               <div class="text-sm">
                 <div class="font-semibold text-[#2C597D] group-hover:text-[#00BCD4] transition">{{ profile?.full_name || profile?.username || 'User' }}</div>
                 <div class="text-gray-500 text-xs capitalize">{{ profile?.role || 'Medical Professional' }}</div>

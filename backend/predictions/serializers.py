@@ -85,10 +85,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profile."""
     username = serializers.CharField(source='user.username', read_only=True)
     email = serializers.EmailField(source='user.email')
+    avatar = serializers.ImageField(required=False, allow_null=True)
     
     class Meta:
         model = UserProfile
-        fields = ['username', 'email', 'full_name', 'contact', 'role', 'created_at', 'updated_at']
+        fields = ['username', 'email', 'full_name', 'contact', 'avatar', 'role', 'created_at', 'updated_at']
         read_only_fields = ['username', 'created_at', 'updated_at']
     
     def update(self, instance, validated_data):

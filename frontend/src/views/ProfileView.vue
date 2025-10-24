@@ -4,8 +4,21 @@
       <div class="bg-white rounded-2xl shadow-lg p-8">
         <!-- Profile Header -->
         <div class="flex items-center space-x-6 mb-8 pb-6 border-b border-gray-200">
-          <div class="w-24 h-24 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] flex items-center justify-center text-white text-3xl font-bold">
-            {{ (profile?.full_name || profile?.username || 'U').charAt(0).toUpperCase() }}
+          <div class="relative group">
+            <!-- Avatar -->
+            <div v-if="!avatarPreview" class="w-24 h-24 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] flex items-center justify-center text-white text-3xl font-bold">
+              {{ (profile?.full_name || profile?.username || 'U').charAt(0).toUpperCase() }}
+            </div>
+            <img v-else :src="avatarPreview" class="w-24 h-24 rounded-full object-cover" alt="Profile" />
+            
+            <!-- Upload Overlay -->
+            <label class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition cursor-pointer">
+              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+              <input type="file" @change="handleAvatarChange" accept="image/*" class="hidden" />
+            </label>
           </div>
           <div>
             <h2 class="text-2xl font-bold text-[#2C597D]">{{ profile?.full_name || profile?.username || 'User' }}</h2>
@@ -125,6 +138,8 @@ export default {
   setup() {
     const toast = useToast()
     const loading = ref(false)
+    const avatarPreview = ref(null)
+    const avatarFile = ref(null)
     const form = ref({
       full_name: '',
       email: '',
@@ -141,17 +156,59 @@ export default {
         form.value.email = profile.email || ''
         form.value.contact = profile.contact || ''
         form.value.role = profile.role || 'doctor'
+        avatarPreview.value = profile.avatar || null
       } catch (e) {
         toast.error('Failed to load profile')
       }
     }
 
+    const handleAvatarChange = (event) => {
+      const file = event.target.files[0]
+      if (!file) return
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file')
+        return
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB')
+        return
+      }
+
+      avatarFile.value = file
+
+      // Preview image
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        avatarPreview.value = e.target.result
+      }
+      reader.readAsDataURL(file)
+
+      toast.success('Image selected! Click Save to upload.')
+    }
+
     const handleSave = async () => {
       loading.value = true
       try {
-        await updateProfile(form.value)
+        // If there's a new avatar, upload it first
+        if (avatarFile.value) {
+          const formData = new FormData()
+          formData.append('avatar', avatarFile.value)
+          formData.append('full_name', form.value.full_name)
+          formData.append('contact', form.value.contact)
+          formData.append('role', form.value.role)
+          
+          await updateProfile(formData)
+          avatarFile.value = null
+        } else {
+          await updateProfile(form.value)
+        }
+        
         // Update store with new data
-        userStore.profile = { ...userStore.profile, ...form.value }
+        await userStore.fetchProfile()
         toast.success('Profile updated successfully!')
       } catch (e) {
         toast.error('Failed to update profile')
@@ -162,12 +219,21 @@ export default {
 
     const handleCancel = () => {
       fetchProfile() // Reset form
+      avatarFile.value = null
       toast.info('Changes cancelled')
     }
 
     onMounted(fetchProfile)
 
-    return { profile: userStore.profile, form, loading, handleSave, handleCancel }
+    return { 
+      profile: userStore.profile, 
+      form, 
+      loading, 
+      avatarPreview,
+      handleAvatarChange,
+      handleSave, 
+      handleCancel 
+    }
   }
 }
 </script>

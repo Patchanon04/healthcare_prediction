@@ -8,18 +8,19 @@ from django.contrib.auth.models import User
 
 class UserProfile(models.Model):
     """
-    Extended user profile for medical professionals.
+    Extended user profile with additional medical professional information.
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     full_name = models.CharField(max_length=255, blank=True)
-    contact = models.CharField(max_length=50, blank=True)
+    contact = models.CharField(max_length=50, blank=True, help_text="Phone number or contact info")
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, help_text="Profile picture")
     role = models.CharField(
-        max_length=20,
+        max_length=50,
         choices=[
             ('doctor', 'Doctor'),
             ('nurse', 'Nurse'),
-            ('specialist', 'Specialist'),
-            ('researcher', 'Researcher'),
+            ('radiologist', 'Radiologist'),
+            ('admin', 'Admin'),
         ],
         default='doctor'
     )
