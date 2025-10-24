@@ -4,8 +4,8 @@
       <!-- Login Form -->
       <div class="p-8">
         <div class="mb-8">
-          <h2 class="text-3xl font-bold text-white mb-2">Your Health System</h2>
-          <p class="text-white/80">Sign in to access your medical dashboard</p>
+          <h2 class="text-3xl font-bold text-white mb-2">OPEN BRAIN Health System</h2>
+          <p class="text-white/80">Sign in to access your medical diagnosis</p>
         </div>
 
         <form @submit.prevent="handleLogin" class="space-y-6">

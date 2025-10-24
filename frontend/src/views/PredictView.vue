@@ -27,7 +27,7 @@
           </div>
           <div>
             <label class="block text-sm text-gray-600 mb-1">Phone</label>
-            <input v-model="patient.phone" class="w-full border rounded-lg px-3 py-2" placeholder="+1 (555) 123-4567" />
+            <input v-model="patient.phone" class="w-full border rounded-lg px-3 py-2" placeholder="081-234-5678" />
           </div>
         </form>
       </div>
