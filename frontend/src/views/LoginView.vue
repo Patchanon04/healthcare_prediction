@@ -60,11 +60,9 @@
         </form>
       </div>
 
-      <!-- Right Illustration -->
+      <!-- Right Illustration (semi-transparent over gradient) -->
       <div class="hidden md:flex items-center justify-center">
-        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6">
-          <img :src="Brain" alt="OPEN BRAIN" class="w-[360px] h-auto object-contain" />
-        </div>
+        <img :src="Brain" alt="OPEN BRAIN" class="w-[420px] h-auto object-contain opacity-40 drop-shadow-xl" />
       </div>
 
     </div>
