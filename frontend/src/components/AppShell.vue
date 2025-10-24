@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-[#00838F] via-[#00ACC1] to-[#4DD0E1] flex">
+  <div class="min-h-screen bg-gradient-to-r from-[#00838F] via-[#26C6DA] to-[#B2EBF2] flex">
     <!-- Sidebar -->
-    <aside class="w-64 bg-gradient-to-b from-[#006064] to-[#00838F] shadow-lg flex flex-col hidden md:flex">
+    <aside class="w-64 bg-gradient-to-r from-[#00838F] to-[#00ACC1] shadow-lg flex flex-col hidden md:flex">
       <!-- Logo/Brand -->
       <div class="p-6 border-b border-white/20">
         <h1 class="text-2xl font-bold text-white">MedML</h1>
@@ -12,23 +12,23 @@
       <nav class="flex-1 p-4 space-y-3">
         <router-link 
           to="/home" 
-          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-[#00BCD4] bg-white mr-4"
-          active-class="!bg-gradient-to-r !from-orange-400 !to-yellow-300 !text-white !shadow-lg"
+          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-white bg-transparent mr-4 border-l-4 border-transparent"
+          active-class="!bg-white !text-[#00838F] !border-l-[#FF6B35]"
         >
           <span class="font-semibold text-lg">Home</span>
         </router-link>
 
         <router-link 
           to="/predict" 
-          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-[#00BCD4] bg-white mr-4"
-          active-class="!bg-gradient-to-r !from-orange-400 !to-yellow-300 !text-white !shadow-lg"
+          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-white bg-transparent mr-4 border-l-4 border-transparent"
+          active-class="!bg-white !text-[#00838F] !border-l-[#FF6B35]"
         >
           <span class="font-semibold text-lg">Predict</span>
         </router-link>
 
         <button 
           @click="logout"
-          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-[#00BCD4] bg-white mr-4 w-full text-left"
+          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-white bg-transparent mr-4 w-full text-left"
         >
           <span class="font-semibold text-lg">Logout</span>
         </button>
