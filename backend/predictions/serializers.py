@@ -24,6 +24,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             'age',
             'gender',
             'mrn',
+            'phone',
             'uploaded_at'
         ]
         read_only_fields = ['id', 'uploaded_at']
@@ -39,6 +40,7 @@ class UploadImageSerializer(serializers.Serializer):
     age = serializers.IntegerField(min_value=0, max_value=150)
     gender = serializers.ChoiceField(choices=['M', 'F', 'O'])
     mrn = serializers.CharField(max_length=100)
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
     def validate_image(self, value):
         """

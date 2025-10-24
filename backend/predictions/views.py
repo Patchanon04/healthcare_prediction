@@ -95,6 +95,7 @@ def upload_image(request):
     age = serializer.validated_data['age']
     gender = serializer.validated_data['gender']
     mrn = serializer.validated_data['mrn']
+    phone = serializer.validated_data.get('phone', '')
     
     try:
         # Upload to S3 or local storage
@@ -127,6 +128,7 @@ def upload_image(request):
 
         # Save transaction to database
         transaction = Transaction.objects.create(
+            user=request.user,
             image_url=image_url,
             diagnosis=ml_diagnosis,
             confidence=ml_confidence,
@@ -136,6 +138,7 @@ def upload_image(request):
             age=age,
             gender=gender,
             mrn=mrn,
+            phone=phone,
         )
         
         total_time = round(time.time() - start_time, 2)
@@ -157,7 +160,7 @@ def upload_image(request):
 
 class TransactionHistoryView(generics.ListAPIView):
     """
-    Get paginated transaction history.
+    Get paginated transaction history filtered by current user.
     
     GET /api/v1/history/
     
@@ -165,9 +168,12 @@ class TransactionHistoryView(generics.ListAPIView):
     - page: Page number (default: 1)
     - page_size: Number of items per page (default: 10, max: 100)
     """
-    queryset = Transaction.objects.all().order_by('-uploaded_at')
     serializer_class = TransactionSerializer
     pagination_class = DefaultPagination
+    
+    def get_queryset(self):
+        # Filter transactions by current user
+        return Transaction.objects.filter(user=self.request.user).order_by('-uploaded_at')
 
 
 class TransactionDetailView(generics.RetrieveAPIView):

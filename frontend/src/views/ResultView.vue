@@ -7,9 +7,13 @@
       <div v-else-if="error" class="py-12 text-center text-red-600">{{ error }}</div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Image placeholder -->
-        <div class="bg-gray-100 rounded-lg h-80 flex items-center justify-center">
-          <span class="text-5xl">🖼️</span>
+        <!-- Image with filename -->
+        <div class="space-y-2">
+          <div class="bg-gray-100 rounded-lg h-80 flex items-center justify-center overflow-hidden">
+            <img v-if="tx.image_url" :src="tx.image_url" alt="Medical scan" class="max-w-full max-h-full object-contain" />
+            <span v-else class="text-5xl">🖼️</span>
+          </div>
+          <p class="text-sm text-gray-600 text-center">{{ getFileName(tx.image_url) }}</p>
         </div>
 
         <!-- Details -->
@@ -89,9 +93,19 @@ export default {
       }
     }
 
+    const getFileName = (url) => {
+      if (!url) return 'No image'
+      try {
+        const parts = url.split('/')
+        return decodeURIComponent(parts[parts.length - 1])
+      } catch {
+        return 'image.jpg'
+      }
+    }
+
     onMounted(fetchTx)
 
-    return { tx, loading, error }
+    return { tx, loading, error, getFileName }
   }
 }
 </script>

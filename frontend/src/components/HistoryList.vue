@@ -22,62 +22,52 @@
     <div v-else class="space-y-4">
       <div class="overflow-x-auto">
         <table class="w-full">
-          <thead class="bg-gray-50">
+          <thead class="bg-[#00BCD4] text-white">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Diagnosis
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Confidence
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Model
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">First Name</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Last Name</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">HN ID</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Gender</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Phone</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Prediction/Diagnosis</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Confidence Score</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Image</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-for="transaction in transactions" :key="transaction.id" class="hover:bg-gray-50">
-              <td class="px-4 py-4">
-                <div class="flex items-center">
-                  <span class="text-2xl mr-2">🐕</span>
-                  <span class="text-sm font-medium text-gray-900">{{ transaction.diagnosis }}</span>
-                </div>
+              <td class="px-4 py-3 text-sm text-gray-900">
+                {{ formatDateShort(transaction.uploaded_at) }}
               </td>
-              <td class="px-4 py-4">
-                <div class="flex items-center">
-                  <div class="flex-1 max-w-xs">
-                    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                      <div 
-                        class="h-full rounded-full"
-                        :class="getConfidenceColor(transaction.confidence)"
-                        :style="{ width: (transaction.confidence * 100) + '%' }"
-                      ></div>
-                    </div>
-                  </div>
-                  <span class="ml-2 text-sm text-gray-600">
-                    {{ Math.round(transaction.confidence * 100) }}%
-                  </span>
-                </div>
+              <td class="px-4 py-3 text-sm text-gray-900">
+                {{ getFirstName(transaction.patient_name) }}
               </td>
-              <td class="px-4 py-4 text-sm text-gray-600">
-                {{ transaction.model_version }}
+              <td class="px-4 py-3 text-sm text-gray-900">
+                {{ getLastName(transaction.patient_name) }}
               </td>
-              <td class="px-4 py-4 text-sm text-gray-600">
-                {{ formatDate(transaction.uploaded_at) }}
+              <td class="px-4 py-3 text-sm text-gray-900">
+                {{ transaction.mrn }}
               </td>
-              <td class="px-4 py-4">
+              <td class="px-4 py-3 text-sm text-gray-900">
+                {{ getGenderText(transaction.gender) }}
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-900">
+                {{ transaction.phone || '-' }}
+              </td>
+              <td class="px-4 py-3 text-sm font-medium text-gray-900">
+                {{ transaction.diagnosis }}
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-900">
+                {{ Math.round(transaction.confidence * 100) }}%
+              </td>
+              <td class="px-4 py-3">
                 <a 
                   :href="transaction.image_url" 
                   target="_blank"
-                  class="text-blue-500 hover:text-blue-700 text-sm font-medium"
+                  class="text-[#00BCD4] hover:text-[#00ACC1] text-sm font-medium underline"
                 >
-                  View Image
+                  View
                 </a>
               </td>
             </tr>
@@ -191,6 +181,32 @@ export default {
       })
     }
 
+    const formatDateShort = (dateString) => {
+      const date = new Date(dateString)
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      })
+    }
+
+    const getFirstName = (fullName) => {
+      if (!fullName) return '-'
+      const parts = fullName.trim().split(' ')
+      return parts[0] || '-'
+    }
+
+    const getLastName = (fullName) => {
+      if (!fullName) return '-'
+      const parts = fullName.trim().split(' ')
+      return parts.slice(1).join(' ') || '-'
+    }
+
+    const getGenderText = (gender) => {
+      const map = { 'M': 'Male', 'F': 'Female', 'O': 'Other' }
+      return map[gender] || gender
+    }
+
     const getConfidenceColor = (confidence) => {
       if (confidence >= 0.9) return 'bg-green-500'
       if (confidence >= 0.75) return 'bg-blue-500'
@@ -214,6 +230,10 @@ export default {
       goToPage,
       refreshHistory,
       formatDate,
+      formatDateShort,
+      getFirstName,
+      getLastName,
+      getGenderText,
       getConfidenceColor
     }
   }
