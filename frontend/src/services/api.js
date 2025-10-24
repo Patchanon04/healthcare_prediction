@@ -6,9 +6,7 @@ const api = axios.create({
   // Allow override via VUE_APP_API_URL for dev or explicit deployments
   baseURL: process.env.VUE_APP_API_URL || '',
   timeout: 60000,
-  headers: {
-    'Content-Type': 'application/json',
-  }
+  // Do not set a static Content-Type here. We'll set it per-request in the interceptor
 })
 
 // Request interceptor
@@ -17,6 +15,17 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token')
     if (token) {
       config.headers['Authorization'] = `Token ${token}`
+    }
+
+    // Dynamically set Content-Type
+    // - For FormData: let the browser set the proper multipart boundary
+    // - Otherwise: JSON
+    const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData
+    if (isFormData) {
+      // Ensure we don't override the boundary
+      delete config.headers['Content-Type']
+    } else {
+      config.headers['Content-Type'] = 'application/json'
     }
     return config
   },
@@ -106,16 +115,7 @@ export const getProfile = async () => {
 }
 
 export const updateProfile = async (profileData) => {
-  const config = {}
-  
-  // If profileData is FormData (contains file), set proper headers
-  if (profileData instanceof FormData) {
-    config.headers = {
-      'Content-Type': 'multipart/form-data',
-    }
-  }
-  
-  const response = await api.put('/api/v1/auth/profile/', profileData, config)
+  const response = await api.put('/api/v1/auth/profile/', profileData)
   return response.data
 }
 
