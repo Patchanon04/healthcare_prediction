@@ -106,7 +106,16 @@ export const getProfile = async () => {
 }
 
 export const updateProfile = async (profileData) => {
-  const response = await api.put('/api/v1/auth/profile/', profileData)
+  const config = {}
+  
+  // If profileData is FormData (contains file), set proper headers
+  if (profileData instanceof FormData) {
+    config.headers = {
+      'Content-Type': 'multipart/form-data',
+    }
+  }
+  
+  const response = await api.put('/api/v1/auth/profile/', profileData, config)
   return response.data
 }
 
