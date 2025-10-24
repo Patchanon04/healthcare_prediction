@@ -76,7 +76,7 @@
             <input 
               v-model="contact" 
               class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#7CC6D2] transition" 
-              placeholder="+1 (555) 123-4567" 
+              placeholder="081-234-5678" 
             />
           </div>
         </div>
