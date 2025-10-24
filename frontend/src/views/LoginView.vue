@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-[#00838F] via-[#4DD0E1] to-white flex items-center justify-center p-6">
-    <div class="w-full max-w-md">
+    <div class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
       <!-- Login Form -->
-      <div class="p-8">
+      <div class="p-8 max-w-md w-full mx-auto md:mx-0">
         <div class="mb-8">
           <h2 class="text-3xl font-bold text-white mb-2">OPEN BRAIN Health System</h2>
           <p class="text-white/80">Sign in to access your medical diagnosis</p>
@@ -60,6 +60,13 @@
         </form>
       </div>
 
+      <!-- Right Illustration -->
+      <div class="hidden md:flex items-center justify-center">
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6">
+          <img :src="Brain" alt="OPEN BRAIN" class="w-[360px] h-auto object-contain" />
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -68,6 +75,7 @@
 import { ref } from 'vue'
 import { useToast } from 'vue-toastification'
 import { login } from '../services/api'
+import Brain from '../assets/brain.png'
 
 export default {
   name: 'LoginView',
@@ -92,7 +100,7 @@ export default {
       }
     }
 
-    return { username, password, loading, handleLogin }
+    return { username, password, loading, handleLogin, Brain }
   }
 }
 </script>
