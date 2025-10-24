@@ -137,10 +137,10 @@ echo -e "${YELLOW}Waiting for services to be ready (30 seconds)...${NC}"
 sleep 30
 
 # ============================================
-# Step 10: Run Migrations
+# Step 10: Run Migrations (Always)
 # ============================================
 echo -e "${GREEN}📊 Step 10: Running database migrations...${NC}"
-docker-compose -f docker-compose.prod.yml exec -T backend python manage.py makemigrations predictions
+docker-compose -f docker-compose.prod.yml exec -T backend python manage.py makemigrations
 docker-compose -f docker-compose.prod.yml exec -T backend python manage.py migrate
 
 # ============================================
@@ -186,7 +186,7 @@ After=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=$(pwd)
-ExecStart=/usr/local/bin/docker-compose -f /home/ubuntu/MLOPs/docker-compose.prod.yml up -d
+ExecStart=/bin/bash -c '/usr/local/bin/docker-compose -f /home/ubuntu/MLOPs/docker-compose.prod.yml up -d && sleep 30 && /usr/local/bin/docker-compose -f /home/ubuntu/MLOPs/docker-compose.prod.yml exec -T backend python manage.py makemigrations && /usr/local/bin/docker-compose -f /home/ubuntu/MLOPs/docker-compose.prod.yml exec -T backend python manage.py migrate'
 ExecStop=/usr/local/bin/docker-compose -f /home/ubuntu/MLOPs/docker-compose.prod.yml down
 User=$USER
 
