@@ -62,7 +62,7 @@
 
       <!-- Right Illustration (semi-transparent over gradient) -->
       <div class="hidden md:flex items-center justify-center">
-        <img :src="Brain" alt="OPEN BRAIN" class="w-[420px] h-auto object-contain opacity-40 drop-shadow-xl" />
+        <img :src="Brain" alt="OPEN BRAIN" class="w-[460px] h-auto object-contain opacity-90 md:opacity-95 drop-shadow-2xl filter saturate-150 contrast-110" />
       </div>
 
     </div>
