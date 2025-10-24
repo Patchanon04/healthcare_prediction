@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-[#B2EBF2] to-[#E0F7FA] flex">
+  <div class="min-h-screen bg-gradient-to-br from-[#00838F] via-[#00ACC1] to-[#4DD0E1] flex">
     <!-- Sidebar -->
-    <aside class="w-64 bg-[#00BCD4] shadow-lg flex flex-col hidden md:flex">
+    <aside class="w-64 bg-gradient-to-b from-[#006064] to-[#00838F] shadow-lg flex flex-col hidden md:flex">
       <!-- Logo/Brand -->
       <div class="p-6 border-b border-white/20">
         <h1 class="text-2xl font-bold text-white">MedML</h1>
@@ -13,7 +13,7 @@
         <router-link 
           to="/home" 
           class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-[#00BCD4] bg-white mr-4"
-          active-class="!bg-white !text-[#00BCD4] shadow-md"
+          active-class="!bg-gradient-to-r !from-orange-400 !to-yellow-300 !text-white !shadow-lg"
         >
           <span class="font-semibold text-lg">Home</span>
         </router-link>
@@ -21,7 +21,7 @@
         <router-link 
           to="/predict" 
           class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-[#00BCD4] bg-white mr-4"
-          active-class="!bg-white !text-[#00BCD4] shadow-md"
+          active-class="!bg-gradient-to-r !from-orange-400 !to-yellow-300 !text-white !shadow-lg"
         >
           <span class="font-semibold text-lg">Predict</span>
         </router-link>

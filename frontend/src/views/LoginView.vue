@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-[#00BCD4] via-[#4DD0E1] to-[#80DEEA] flex items-center justify-center p-6">
+  <div class="min-h-screen bg-gradient-to-br from-[#00838F] via-[#00ACC1] to-[#4DD0E1] flex items-center justify-center p-6">
     <div class="w-full max-w-md">
       <!-- Login Form -->
       <div class="p-8">
