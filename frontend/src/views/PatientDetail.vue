@@ -71,6 +71,7 @@
 
 <script>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useToast } from 'vue-toastification'
 import AppShell from '../components/AppShell.vue'
 import UploadForm from '../components/UploadForm.vue'
 import { getPatient, getPatientTransactions } from '../services/api'
@@ -79,6 +80,7 @@ export default {
   name: 'PatientDetail',
   components: { AppShell, UploadForm },
   setup(props, { attrs, root }) {
+    const toast = useToast()
     const routeId = Number(window.location.pathname.split('/').pop())
     const patient = ref(null)
     const transactions = ref([])
@@ -124,8 +126,14 @@ export default {
       fetchTransactions()
     }
 
-    const onUploadSuccess = () => {
+    const onUploadSuccess = (tx) => {
       refresh()
+      try {
+        const msg = `Diagnosis: ${tx.diagnosis || 'N/A'}\nConfidence: ${tx.confidence != null ? Math.round(tx.confidence * 100) + '%': 'N/A'}`
+        toast.success(msg, { timeout: 6000 })
+      } catch (_) {
+        // ignore toast error
+      }
     }
 
     onMounted(() => {

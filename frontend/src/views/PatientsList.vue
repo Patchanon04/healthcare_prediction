@@ -22,19 +22,19 @@
                 <th class="text-left px-4 py-2">Phone</th>
                 <th class="text-left px-4 py-2">Age</th>
                 <th class="text-left px-4 py-2">Gender</th>
-                <th class="text-right px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="p in patients" :key="p.id" class="border-t">
-                <td class="px-4 py-2">{{ p.full_name }}</td>
+                <td class="px-4 py-2">
+                  <router-link :to="{ name: 'PatientDetail', params: { id: p.id } }" class="text-[#00BCD4] hover:underline">
+                    {{ p.full_name }}
+                  </router-link>
+                </td>
                 <td class="px-4 py-2">{{ p.mrn || '-' }}</td>
                 <td class="px-4 py-2">{{ p.phone || '-' }}</td>
                 <td class="px-4 py-2">{{ p.age }}</td>
                 <td class="px-4 py-2">{{ genderLabel(p.gender) }}</td>
-                <td class="px-4 py-2 text-right">
-                  <router-link :to="{ name: 'PatientDetail', params: { id: p.id } }" class="text-[#00BCD4] hover:underline">View</router-link>
-                </td>
               </tr>
             </tbody>
           </table>
