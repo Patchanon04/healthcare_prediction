@@ -116,6 +116,11 @@ export const getPatientTransactions = async (id, { page = 1, pageSize = 10 } = {
   return response.data
 }
 
+export const updatePatient = async (id, data) => {
+  const response = await api.put(`/api/v1/patients/${id}/`, data)
+  return response.data
+}
+
 /**
  * Check backend health status
  * @returns {Promise} - Promise with health status

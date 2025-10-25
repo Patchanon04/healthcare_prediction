@@ -71,12 +71,17 @@
             </div>
             <div class="w-1/2">
               <label class="block text-sm text-gray-600 mb-1">Gender <span class="text-red-500">*</span></label>
-              <select v-model="form.gender" class="w-full border rounded px-3 py-2" required>
-                <option value="">Select gender</option>
-                <option value="M">Male</option>
-                <option value="F">Female</option>
-                <option value="O">Other</option>
-              </select>
+              <div class="relative">
+                <select v-model="form.gender" class="w-full border rounded px-3 pr-10 py-2 appearance-none bg-white" required>
+                  <option value="">Select gender</option>
+                  <option value="M">Male</option>
+                  <option value="F">Female</option>
+                  <option value="O">Other</option>
+                </select>
+                <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.106l3.71-3.876a.75.75 0 011.08 1.04l-4.24 4.43a.75.75 0 01-1.08 0l-4.24-4.43a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                </svg>
+              </div>
             </div>
           </div>
           <div>

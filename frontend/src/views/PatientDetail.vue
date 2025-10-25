@@ -3,7 +3,10 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Patient Info -->
       <div class="bg-white rounded-xl shadow p-6 lg:col-span-1">
-        <h3 class="text-lg font-semibold mb-4">Patient Info</h3>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold">Patient Info</h3>
+          <button @click="openEdit" class="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50">Edit</button>
+        </div>
         <div v-if="loadingPatient" class="text-gray-500">Loading...</div>
         <div v-else class="space-y-2">
           <div><span class="text-gray-500">MRN:</span> <span class="ml-2">{{ patient.mrn || '-' }}</span></div>
@@ -71,35 +74,52 @@
   <!-- Result Modal -->
   <transition name="modal">
     <div v-if="showResult" class="fixed inset-0 z-50 flex items-center justify-center" @click="showResult = false">
-      <div class="absolute inset-0 bg-black/50"></div>
-      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden" @click.stop>
-        <div class="flex flex-col md:flex-row">
-          <div class="md:w-1/2 bg-gray-50 p-4 flex items-center justify-center">
-            <img v-if="resultTx?.image_url" :src="resultTx.image_url" alt="Uploaded" class="max-h-80 object-contain rounded-lg" />
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+      <div class="relative bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.25)] w-full max-w-3xl mx-4 overflow-hidden border border-gray-100" @click.stop>
+        <!-- Header -->
+        <div class="relative bg-gradient-to-r from-[#00BCD4] via-[#00ACC1] to-[#0097A7] text-white p-5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+              <span class="text-2xl">🎯</span>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold tracking-wide">Prediction Result</h3>
+              <div class="text-white/80 text-sm">Model {{ resultTx?.model_version || '-' }} • {{ resultTx?.processing_time != null ? resultTx.processing_time + 's' : '-' }}</div>
+            </div>
+          </div>
+          <button @click="showResult = false" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        
+        <!-- Body -->
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Image -->
+          <div class="bg-gray-50 rounded-2xl p-4 flex items-center justify-center border border-gray-100">
+            <img v-if="resultTx?.image_url" :src="resultTx.image_url" alt="Uploaded" class="max-h-80 object-contain rounded-lg shadow-sm" />
             <div v-else class="text-gray-400">No image</div>
           </div>
-          <div class="md:w-1/2 p-6">
-            <h3 class="text-xl font-semibold text-[#2C597D] mb-3">Prediction Result</h3>
-            <div class="space-y-2 text-gray-700">
-              <div>
-                <span class="font-medium">Diagnosis:</span>
-                <span class="ml-2">{{ resultTx?.diagnosis || '-' }}</span>
-              </div>
-              <div>
-                <span class="font-medium">Confidence:</span>
-                <span class="ml-2">{{ resultTx?.confidence != null ? Math.round(resultTx.confidence * 100) + '%' : '-' }}</span>
-              </div>
-              <div>
-                <span class="font-medium">Model:</span>
-                <span class="ml-2">{{ resultTx?.model_version || '-' }}</span>
-              </div>
-              <div>
-                <span class="font-medium">Processed in:</span>
-                <span class="ml-2">{{ resultTx?.processing_time != null ? resultTx.processing_time + 's' : '-' }}</span>
-              </div>
+          
+          <!-- Details -->
+          <div class="space-y-4">
+            <div>
+              <div class="text-sm text-gray-500">Diagnosis</div>
+              <div class="mt-1 text-2xl font-semibold text-[#2C597D]">{{ resultTx?.diagnosis || '-' }}</div>
             </div>
-            <div class="mt-6 flex justify-end gap-2">
-              <button @click="showResult = false" class="px-4 py-2 rounded-lg border">Close</button>
+            <div class="flex items-center gap-3">
+              <span class="text-sm text-gray-500">Confidence</span>
+              <span :class="getConfidenceBadge(resultTx?.confidence)" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold">
+                {{ resultTx?.confidence != null ? Math.round(resultTx.confidence * 100) + '%' : '-' }}
+              </span>
+            </div>
+            <div class="text-sm text-gray-500">Patient</div>
+            <div class="text-gray-700">
+              {{ patient?.full_name }} <span class="text-gray-400">•</span> MRN {{ patient?.mrn || '-' }}
+            </div>
+
+            <div class="pt-2 flex gap-2">
+              <a v-if="resultTx?.image_url" :href="resultTx.image_url" target="_blank" class="px-4 py-2 rounded-xl border text-[#00ACC1] hover:bg-[#00ACC1] hover:text-white transition">View Image</a>
+              <button @click="showResult = false" class="px-4 py-2 rounded-xl bg-[#00BCD4] text-white hover:bg-[#00ACC1] transition">Close</button>
             </div>
           </div>
         </div>
@@ -113,7 +133,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import AppShell from '../components/AppShell.vue'
 import UploadForm from '../components/UploadForm.vue'
-import { getPatient, getPatientTransactions } from '../services/api'
+import { getPatient, getPatientTransactions, updatePatient } from '../services/api'
 
 export default {
   name: 'PatientDetail',
@@ -127,6 +147,9 @@ export default {
     const transactions = ref([])
     const loadingPatient = ref(true)
     const loadingTx = ref(true)
+    const showEdit = ref(false)
+    const savingEdit = ref(false)
+    const editForm = ref({ full_name: '', mrn: '', phone: '', age: null, gender: '', notes: '' })
 
     const page = ref(1)
     const pageSize = ref(10)
@@ -136,10 +159,49 @@ export default {
     const genderLabel = (g) => ({ M: 'Male', F: 'Female', O: 'Other' }[g] || '-')
     const formatDate = (d) => new Date(d).toLocaleString()
 
+    const getConfidenceBadge = (c) => {
+      if (c == null) return 'bg-gray-100 text-gray-600'
+      if (c >= 0.9) return 'bg-green-100 text-green-700'
+      if (c >= 0.75) return 'bg-blue-100 text-blue-700'
+      if (c >= 0.6) return 'bg-yellow-100 text-yellow-700'
+      return 'bg-orange-100 text-orange-700'
+    }
+
+    const openEdit = () => {
+      showEdit.value = true
+    }
+
+    const saveEdit = async () => {
+      try {
+        if (!editForm.value.full_name || !editForm.value.mrn || !editForm.value.age || !editForm.value.gender) {
+          toast.error('Please fill required fields: Full name, MRN, Age, Gender')
+          return
+        }
+        savingEdit.value = true
+        const updated = await updatePatient(routeId, editForm.value)
+        patient.value = updated
+        showEdit.value = false
+        toast.success('Patient updated')
+      } catch (e) {
+        toast.error(e.message || 'Update failed')
+      } finally {
+        savingEdit.value = false
+      }
+    }
+
     const fetchPatient = async () => {
       loadingPatient.value = true
       try {
         patient.value = await getPatient(routeId)
+        // sync edit form
+        editForm.value = {
+          full_name: patient.value.full_name || '',
+          mrn: patient.value.mrn || '',
+          phone: patient.value.phone || '',
+          age: patient.value.age ?? null,
+          gender: patient.value.gender || '',
+          notes: patient.value.notes || ''
+        }
       } finally {
         loadingPatient.value = false
       }
@@ -182,7 +244,7 @@ export default {
       fetchTransactions()
     })
 
-    return { patient, transactions, loadingPatient, loadingTx, genderLabel, formatDate, page, pageSize, count, totalPages, go, refresh, onUploadSuccess, showResult, resultTx }
+    return { patient, transactions, loadingPatient, loadingTx, genderLabel, formatDate, page, pageSize, count, totalPages, go, refresh, onUploadSuccess, showResult, resultTx, getConfidenceBadge, showEdit, editForm, savingEdit, openEdit, saveEdit }
   }
 }
 </script>
