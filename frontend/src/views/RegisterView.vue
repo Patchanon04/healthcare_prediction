@@ -182,6 +182,8 @@ export default {
         })
         
         toast.success('Account created successfully!')
+        // Small delay to ensure token is set before navigation
+        await new Promise(resolve => setTimeout(resolve, 100))
         router.push('/patients')
       } catch (e) {
         toast.error(e.message)

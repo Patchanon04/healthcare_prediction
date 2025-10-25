@@ -92,6 +92,8 @@ export default {
         const data = await login({ username: username.value, password: password.value })
         localStorage.setItem('token', data.token)
         toast.success('Welcome!')
+        // Small delay to ensure token is set before navigation
+        await new Promise(resolve => setTimeout(resolve, 100))
         router.push('/patients')
       } catch (e) {
         toast.error(e.message)
