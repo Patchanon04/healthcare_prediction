@@ -66,6 +66,11 @@ class Migration(migrations.Migration):
             name='user',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='transactions', to=settings.AUTH_USER_MODEL),
         ),
+        migrations.AddField(
+            model_name='transaction',
+            name='patient',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='transactions', to='predictions.patient'),
+        ),
         migrations.AddIndex(
             model_name='transaction',
             index=models.Index(fields=['patient'], name='transaction_patient_idx'),
@@ -86,10 +91,5 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name='patient',
             index=models.Index(fields=['phone'], name='patient_phone_idx'),
-        ),
-        migrations.AddField(
-            model_name='transaction',
-            name='patient',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='transactions', to='predictions.patient'),
         ),
     ]
