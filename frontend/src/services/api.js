@@ -121,6 +121,22 @@ export const updatePatient = async (id, data) => {
   return response.data
 }
 
+// Dashboard metrics
+export const getMetricsSummary = async () => {
+  const res = await api.get('/api/v1/metrics/summary/')
+  return res.data
+}
+
+export const getMetricsDaily = async (days = 14) => {
+  const res = await api.get('/api/v1/metrics/daily/', { params: { days } })
+  return res.data
+}
+
+export const getDiagnosisDistribution = async () => {
+  const res = await api.get('/api/v1/metrics/diagnosis-distribution/')
+  return res.data
+}
+
 /**
  * Check backend health status
  * @returns {Promise} - Promise with health status

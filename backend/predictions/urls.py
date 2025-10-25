@@ -21,4 +21,8 @@ urlpatterns = [
     path('auth/login/', views.login, name='login'),
     path('auth/me/', views.me, name='me'),
     path('auth/profile/', views.profile, name='profile'),
+    # metrics (dashboard)
+    path('metrics/summary/', views.metrics_summary, name='metrics-summary'),
+    path('metrics/daily/', views.metrics_daily, name='metrics-daily'),
+    path('metrics/diagnosis-distribution/', views.metrics_diagnosis_distribution, name='metrics-diagnosis'),
 ]

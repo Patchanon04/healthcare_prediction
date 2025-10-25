@@ -8,7 +8,11 @@ import requests
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import connection
-from django.db.models import Q
+from django.db.models import Q, Count, Avg
+from django.db.models.functions import TruncDate
+from django.utils import timezone
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 from django.contrib.auth import authenticate
 from rest_framework import status, generics, permissions
 from rest_framework.decorators import api_view, permission_classes

@@ -2,11 +2,13 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import PatientsList from '../views/PatientsList.vue'
+import Dashboard from '../views/Dashboard.vue'
 import PatientDetail from '../views/PatientDetail.vue'
 import ProfileView from '../views/ProfileView.vue'
 
 const routes = [
   { path: '/', redirect: '/patients' },
+  { path: '/dashboard', name: 'Dashboard', component: Dashboard, meta: { title: 'Dashboard' } },
   { path: '/login', name: 'Login', component: LoginView, meta: { public: true } },
   { path: '/register', name: 'Register', component: RegisterView, meta: { public: true } },
   { path: '/patients', name: 'Patients', component: PatientsList, meta: { title: 'Patients' } },
