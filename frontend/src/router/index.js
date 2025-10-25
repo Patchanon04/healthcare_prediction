@@ -3,19 +3,14 @@ import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import PatientsList from '../views/PatientsList.vue'
 import PatientDetail from '../views/PatientDetail.vue'
-import PredictView from '../views/PredictView.vue'
-import ResultView from '../views/ResultView.vue'
 import ProfileView from '../views/ProfileView.vue'
 
 const routes = [
-  { path: '/', redirect: '/home' },
+  { path: '/', redirect: '/patients' },
   { path: '/login', name: 'Login', component: LoginView, meta: { public: true } },
   { path: '/register', name: 'Register', component: RegisterView, meta: { public: true } },
-  { path: '/home', name: 'Home', component: PatientsList, meta: { title: 'History', historyMode: true } },
-  { path: '/patients', name: 'Patients', component: PatientsList, meta: { title: 'Patient' } },
+  { path: '/patients', name: 'Patients', component: PatientsList, meta: { title: 'Patients' } },
   { path: '/patients/:id', name: 'PatientDetail', component: PatientDetail, props: true },
-  { path: '/predict', name: 'Predict', component: PredictView },
-  { path: '/result/:id', name: 'Result', component: ResultView, props: true },
   { path: '/profile', name: 'Profile', component: ProfileView },
 ]
 

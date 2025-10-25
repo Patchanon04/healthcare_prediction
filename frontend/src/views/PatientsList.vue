@@ -56,19 +56,37 @@
       <div class="bg-white rounded-xl shadow p-6 w-full max-w-md" @click.stop>
         <h3 class="text-lg font-semibold mb-4">Add Patient</h3>
         <div class="space-y-3">
-          <input v-model="form.full_name" type="text" placeholder="Full name" class="w-full border rounded px-3 py-2" />
-          <input v-model="form.mrn" type="text" placeholder="MRN" class="w-full border rounded px-3 py-2" />
-          <div class="flex gap-3">
-            <input v-model.number="form.age" type="number" placeholder="Age" class="w-1/2 border rounded px-3 py-2" />
-            <select v-model="form.gender" class="w-1/2 border rounded px-3 py-2">
-              <option value="">Gender</option>
-              <option value="M">Male</option>
-              <option value="F">Female</option>
-              <option value="O">Other</option>
-            </select>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Full name <span class="text-red-500">*</span></label>
+            <input v-model="form.full_name" type="text" placeholder="Full name" class="w-full border rounded px-3 py-2" required />
           </div>
-          <input v-model="form.phone" type="text" placeholder="Phone" class="w-full border rounded px-3 py-2" />
-          <textarea v-model="form.notes" placeholder="Notes" class="w-full border rounded px-3 py-2"></textarea>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">MRN <span class="text-red-500">*</span></label>
+            <input v-model="form.mrn" type="text" placeholder="Medical Record Number" class="w-full border rounded px-3 py-2" required />
+          </div>
+          <div class="flex gap-3">
+            <div class="w-1/2">
+              <label class="block text-sm text-gray-600 mb-1">Age <span class="text-red-500">*</span></label>
+              <input v-model.number="form.age" type="number" placeholder="Age" class="w-full border rounded px-3 py-2" required />
+            </div>
+            <div class="w-1/2">
+              <label class="block text-sm text-gray-600 mb-1">Gender <span class="text-red-500">*</span></label>
+              <select v-model="form.gender" class="w-full border rounded px-3 py-2" required>
+                <option value="">Select gender</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="O">Other</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Phone</label>
+            <input v-model="form.phone" type="text" placeholder="Phone number" class="w-full border rounded px-3 py-2" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Notes</label>
+            <textarea v-model="form.notes" placeholder="Additional notes" class="w-full border rounded px-3 py-2" rows="3"></textarea>
+          </div>
         </div>
         <div class="flex gap-2 mt-4">
           <button @click="showCreate=false" class="px-4 py-2 border rounded">Cancel</button>
@@ -134,7 +152,9 @@ export default {
     const create = async () => {
       submitting.value = true
       try {
-        if (!form.value.full_name || !form.value.age || !form.value.gender) throw new Error('Please fill required fields')
+        if (!form.value.full_name || !form.value.mrn || !form.value.age || !form.value.gender) {
+          throw new Error('Please fill required fields: Full name, MRN, Age, and Gender')
+        }
         await createPatient(form.value)
         showCreate.value = false
         form.value = { full_name: '', mrn: '', phone: '', age: null, gender: '', notes: '' }
