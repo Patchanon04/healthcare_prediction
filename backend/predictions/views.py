@@ -431,3 +431,61 @@ def profile(request):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+@cache_page(60)  # cache for 60 seconds
+def metrics_summary(request):
+    """Return quick summary numbers for dashboard."""
+    today = timezone.localdate()
+    total_patients = Patient.objects.count()
+    total_predictions = Transaction.objects.count()
+    today_predictions = Transaction.objects.filter(uploaded_at__date=today).count()
+    avg_conf = Transaction.objects.aggregate(avg=Avg('confidence'))['avg'] or 0
+    return Response({
+        'total_patients': total_patients,
+        'total_predictions': total_predictions,
+        'today_predictions': today_predictions,
+        'avg_confidence': avg_conf,
+        'date': str(today),
+    })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+@cache_page(60)
+def metrics_daily(request):
+    """Return counts per day for the last N days (default 14)."""
+    try:
+        days = int(request.query_params.get('days', 14))
+    except (TypeError, ValueError):
+        days = 14
+    days = max(1, min(days, 60))
+    start = timezone.now() - timezone.timedelta(days=days - 1)
+    qs = (
+        Transaction.objects
+        .filter(uploaded_at__date__gte=start.date())
+        .annotate(day=TruncDate('uploaded_at'))
+        .values('day')
+        .annotate(count=Count('id'))
+        .order_by('day')
+    )
+    data = [{'date': str(row['day']), 'count': row['count']} for row in qs]
+    return Response({'series': data})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+@cache_page(60)
+def metrics_diagnosis_distribution(request):
+    """Return diagnosis distribution for doughnut chart."""
+    qs = (
+        Transaction.objects
+        .exclude(diagnosis__isnull=True)
+        .exclude(diagnosis='')
+        .values('diagnosis')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+    data = [{'diagnosis': row['diagnosis'], 'count': row['count']} for row in qs]
+    return Response({'distribution': data})
