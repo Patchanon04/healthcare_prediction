@@ -141,14 +141,12 @@
 
 <script>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { register, updateProfile } from '../services/api'
 
 export default {
   name: 'RegisterView',
   setup() {
-    const router = useRouter()
     const toast = useToast()
     const username = ref('')
     const fullName = ref('')
@@ -182,9 +180,7 @@ export default {
         })
         
         toast.success('Account created successfully!')
-        // Small delay to ensure token is set before navigation
-        await new Promise(resolve => setTimeout(resolve, 100))
-        router.push('/patients')
+        window.location.href = '/patients'
       } catch (e) {
         toast.error(e.message)
       } finally {

@@ -71,7 +71,6 @@
 
 <script>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { login } from '../services/api'
 import Brain from '../assets/brain.png'
@@ -79,7 +78,6 @@ import Brain from '../assets/brain.png'
 export default {
   name: 'LoginView',
   setup() {
-    const router = useRouter()
     const toast = useToast()
     const username = ref('')
     const password = ref('')
@@ -92,9 +90,7 @@ export default {
         const data = await login({ username: username.value, password: password.value })
         localStorage.setItem('token', data.token)
         toast.success('Welcome!')
-        // Small delay to ensure token is set before navigation
-        await new Promise(resolve => setTimeout(resolve, 100))
-        router.push('/patients')
+        window.location.href = '/patients'
       } catch (e) {
         toast.error(e.message)
       } finally {

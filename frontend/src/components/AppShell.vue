@@ -103,13 +103,6 @@ export default {
     const showLogoutModal = ref(false)
 
     const fetchProfile = async () => {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        // No token, redirect to login
-        window.location.href = '/login'
-        return
-      }
-      
       try {
         await userStore.fetchProfile()
       } catch (e) {
