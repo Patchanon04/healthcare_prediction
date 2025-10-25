@@ -17,28 +17,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mock medical conditions database (example)
+# Mock medical conditions database (brain-related conditions example)
 MEDICAL_CONDITIONS = [
-    "Labrador Retriever",
-    "German Shepherd",
-    "Golden Retriever",
-    "French Bulldog",
-    "Bulldog",
-    "Poodle",
-    "Beagle",
-    "Rottweiler",
-    "German Shorthaired Pointer",
-    "Yorkshire Terrier",
-    "Boxer",
-    "Dachshund",
-    "Siberian Husky",
-    "Great Dane",
-    "Doberman Pinscher",
-    "Australian Shepherd",
-    "Miniature Schnauzer",
-    "Cavalier King Charles Spaniel",
-    "Shih Tzu",
-    "Boston Terrier"
+    "intracranial_hemorrhage",
+    "subdural_hematoma",
+    "epidural_hematoma",
+    "subarachnoid_hemorrhage",
+    "intraparenchymal_hemorrhage",
+    "ischemic_stroke",
+    "brain_tumor_meningioma",
+    "brain_tumor_glioma",
+    "brain_tumor_pituitary",
+    "hydrocephalus",
+    "midline_shift",
+    "skull_fracture",
+    "cerebral_edema",
+    "normal"
 ]
 
 MODEL_VERSION = "v1.0"
@@ -49,7 +43,7 @@ class PredictionRequest(BaseModel):
 
 
 class PredictionResponse(BaseModel):
-    breed: str
+    diagnosis: str
     confidence: float
     model_version: str
     processing_time: float
@@ -72,9 +66,9 @@ async def health_check():
 
 
 @app.post("/predict/", response_model=PredictionResponse)
-async def predict_breed(request: PredictionRequest):
+async def predict_diagnosis(request: PredictionRequest):
     """
-    Predict medical condition from image URL.
+    Predict brain-related medical condition from an image URL.
     
     In production, this would:
     1. Download the image from the URL
@@ -107,13 +101,13 @@ async def predict_breed(request: PredictionRequest):
         time.sleep(inference_time)
         
         # Generate mock prediction
-        breed = random.choice(DOG_BREEDS)
+        diagnosis = random.choice(MEDICAL_CONDITIONS)
         confidence = round(random.uniform(0.75, 0.99), 2)
         
         processing_time = round(time.time() - start_time, 2)
         
         return PredictionResponse(
-            breed=breed,
+            diagnosis=diagnosis,
             confidence=confidence,
             model_version=MODEL_VERSION,
             processing_time=processing_time
