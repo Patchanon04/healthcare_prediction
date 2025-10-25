@@ -94,9 +94,9 @@ pipeline {
             set -e
             echo "Updating Nginx configuration..."
             # Copy nginx.conf to a temp location that Jenkins can access
-            cp nginx.conf /tmp/dogbreed-nginx.conf
-            echo "✅ Nginx config updated in /tmp/dogbreed-nginx.conf"
-            echo "⚠️  Manual step: Run 'sudo cp /tmp/dogbreed-nginx.conf /etc/nginx/sites-available/dogbreed.conf && sudo systemctl reload nginx'"
+            cp nginx.conf /tmp/medical-nginx.conf
+            echo "✅ Nginx config updated in /tmp/medical-nginx.conf"
+            echo "⚠️  Manual step: Run 'sudo cp /tmp/medical-nginx.conf /etc/nginx/sites-available/medical.conf && sudo systemctl reload nginx'"
           '''
         }
       }

@@ -4,9 +4,9 @@ services:
   # PostgreSQL Database
   db:
     image: postgres:15-alpine
-    container_name: dogbreed_db
+    container_name: medical_db
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-dogbreed_db}
+      POSTGRES_DB: ${POSTGRES_DB:-medical_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
@@ -19,14 +19,14 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - dogbreed_network
+      - medical_network
 
   # ML Microservice (FastAPI)
   ml_service:
     build:
       context: ./ml_service
       dockerfile: Dockerfile
-    container_name: dogbreed_ml_service
+    container_name: medical_ml_service
     ports:
       - "5001:5000"
     environment:
@@ -38,7 +38,7 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - dogbreed_network
+      - medical_network
     restart: unless-stopped
 
   # Backend (Django REST Framework)
@@ -46,14 +46,14 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: dogbreed_backend
+    container_name: medical_backend
     ports:
       - "8000:8000"
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-dev-key-change-in-production}
       - DEBUG=${DEBUG:-True}
-      - POSTGRES_DB=${POSTGRES_DB:-dogbreed_db}
+      - POSTGRES_DB=${POSTGRES_DB:-medical_db}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_HOST=db
@@ -81,7 +81,7 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - dogbreed_network
+      - medical_network
     restart: unless-stopped
 
   # Frontend (Vue.js)
@@ -89,7 +89,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: dogbreed_frontend
+    container_name: medical_frontend
     ports:
       - "80:80"
     environment:
@@ -103,7 +103,7 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - dogbreed_network
+      - medical_network
     restart: unless-stopped
 
 volumes:
@@ -111,5 +111,5 @@ volumes:
     driver: local
 
 networks:
-  dogbreed_network:
+  medical_network:
     driver: bridge

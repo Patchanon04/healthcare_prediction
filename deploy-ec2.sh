@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================
 # Deploy Script สำหรับ AWS EC2
-# Dog Breed Prediction System
+# Medical Diagnosis System
 # ============================================
 
 set -e  # Exit on error

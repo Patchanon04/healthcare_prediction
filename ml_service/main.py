@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
 import httpx
 
-app = FastAPI(title="Dog Breed Prediction ML Service", version="1.0.0")
+app = FastAPI(title="Medical Diagnosis ML Service", version="1.0.0")
 
 # CORS configuration
 app.add_middleware(
@@ -17,8 +17,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mock dog breeds database
-DOG_BREEDS = [
+# Mock medical conditions database (example)
+MEDICAL_CONDITIONS = [
     "Labrador Retriever",
     "German Shepherd",
     "Golden Retriever",
@@ -74,7 +74,7 @@ async def health_check():
 @app.post("/predict/", response_model=PredictionResponse)
 async def predict_breed(request: PredictionRequest):
     """
-    Predict dog breed from image URL.
+    Predict medical condition from image URL.
     
     In production, this would:
     1. Download the image from the URL
@@ -132,7 +132,7 @@ async def predict_breed(request: PredictionRequest):
 async def root():
     """Root endpoint with service information."""
     return {
-        "service": "Dog Breed Prediction ML Service",
+        "service": "Medical Diagnosis ML Service",
         "version": MODEL_VERSION,
         "endpoints": [
             "/health/",

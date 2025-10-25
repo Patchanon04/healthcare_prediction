@@ -1,5 +1,5 @@
 """
-Django settings for dog breed prediction backend.
+Django settings for medical diagnosis backend.
 """
 import os
 from pathlib import Path
@@ -70,7 +70,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'dogbreed_db'),
+        'NAME': os.getenv('POSTGRES_DB', 'medical_db'),
         'USER': os.getenv('POSTGRES_USER', 'postgres'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'postgres'),
         'HOST': os.getenv('POSTGRES_HOST', 'db'),
