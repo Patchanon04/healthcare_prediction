@@ -188,12 +188,16 @@ export default {
       isLoading.value = true
 
       try {
-        // minimal patient validation if provided
+        // Support two flows:
+        // 1) New flow: props.patient contains patient_id -> no need for legacy fields
+        // 2) Legacy flow: require patient fields
         const p = props.patient || {}
-        const required = ['patient_name', 'age', 'gender', 'mrn']
-        for (const key of required) {
-          if (p[key] === undefined || p[key] === null || p[key] === '') {
-            throw new Error('Please fill patient information completely')
+        if (!p.patient_id) {
+          const required = ['patient_name', 'age', 'gender', 'mrn']
+          for (const key of required) {
+            if (p[key] === undefined || p[key] === null || p[key] === '') {
+              throw new Error('Please fill patient information completely')
+            }
           }
         }
         const result = await uploadImage(selectedFile.value, p)

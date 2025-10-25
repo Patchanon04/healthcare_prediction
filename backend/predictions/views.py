@@ -8,6 +8,7 @@ import requests
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import connection
+from django.db.models import Q
 from django.contrib.auth import authenticate
 from rest_framework import status, generics, permissions
 from rest_framework.decorators import api_view, permission_classes
@@ -16,13 +17,14 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.authtoken.models import Token
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-from .models import Transaction, UserProfile
+from .models import Transaction, UserProfile, Patient
 from .serializers import (
     TransactionSerializer,
     UploadImageSerializer,
     RegisterSerializer,
     LoginSerializer,
     UserProfileSerializer,
+    PatientSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -91,10 +93,12 @@ def upload_image(request):
         )
     
     image_file = serializer.validated_data['image']
-    patient_name = serializer.validated_data['patient_name']
-    age = serializer.validated_data['age']
-    gender = serializer.validated_data['gender']
-    mrn = serializer.validated_data['mrn']
+    patient_id = serializer.validated_data.get('patient_id')
+    # Legacy fields used only to create/find Patient when patient_id is not provided
+    patient_name = serializer.validated_data.get('patient_name')
+    age = serializer.validated_data.get('age')
+    gender = serializer.validated_data.get('gender')
+    mrn = serializer.validated_data.get('mrn')
     phone = serializer.validated_data.get('phone', '')
     
     try:
@@ -111,6 +115,49 @@ def upload_image(request):
         
         logger.info(f"Image uploaded to: {image_url}")
         
+        # Resolve patient record
+        patient_obj = None
+        if patient_id:
+            try:
+                patient_obj = Patient.objects.get(id=patient_id)
+            except Patient.DoesNotExist:
+                return Response({"error": "Patient not found"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # Create or get patient by MRN if provided; fallback by name+phone
+            if mrn:
+                patient_obj, _ = Patient.objects.get_or_create(
+                    mrn=mrn,
+                    defaults={
+                        'full_name': patient_name,
+                        'age': age,
+                        'gender': gender,
+                        'phone': phone or '',
+                    }
+                )
+                # If exists but missing data, update minimally
+                updated = False
+                if patient_name and not patient_obj.full_name:
+                    patient_obj.full_name = patient_name; updated = True
+                if age is not None and patient_obj.age != age:
+                    patient_obj.age = age; updated = True
+                if gender and patient_obj.gender != gender:
+                    patient_obj.gender = gender; updated = True
+                if phone and not patient_obj.phone:
+                    patient_obj.phone = phone; updated = True
+                if updated:
+                    patient_obj.save()
+            else:
+                # No MRN, try name+phone grouping
+                patient_obj, _ = Patient.objects.get_or_create(
+                    full_name=patient_name,
+                    phone=phone or '',
+                    defaults={
+                        'mrn': '',
+                        'age': age,
+                        'gender': gender,
+                    }
+                )
+
         # Call ML service for prediction
         try:
             prediction_result = call_ml_service(image_url)
@@ -129,16 +176,12 @@ def upload_image(request):
         # Save transaction to database
         transaction = Transaction.objects.create(
             user=request.user if request.user.is_authenticated else None,
+            patient=patient_obj,
             image_url=image_url,
             diagnosis=ml_diagnosis,
             confidence=ml_confidence,
             model_version=ml_model_version,
             processing_time=ml_processing_time,
-            patient_name=patient_name,
-            age=age,
-            gender=gender,
-            mrn=mrn,
-            phone=phone,
         )
         
         total_time = round(time.time() - start_time, 2)
@@ -189,6 +232,46 @@ class TransactionDetailView(generics.RetrieveAPIView):
 def health_check(request):
     """Health check endpoint."""
     return Response({'status': 'ok'})
+
+
+class PatientListCreateView(generics.ListCreateAPIView):
+    """
+    List patients with search, or create a new patient.
+    GET /api/v1/patients/?search=...
+    POST /api/v1/patients/
+    """
+    serializer_class = PatientSerializer
+    pagination_class = DefaultPagination
+
+    def get_queryset(self):
+        qs = Patient.objects.all().order_by('-created_at')
+        search = self.request.query_params.get('search')
+        if search:
+            qs = qs.filter(
+                Q(full_name__icontains=search) |
+                Q(mrn__icontains=search) |
+                Q(phone__icontains=search)
+            )
+        return qs
+
+
+class PatientDetailView(generics.RetrieveUpdateAPIView):
+    """Retrieve or update a patient by id."""
+    queryset = Patient.objects.all()
+    serializer_class = PatientSerializer
+
+
+class PatientTransactionsView(generics.ListAPIView):
+    """
+    List transactions for a specific patient.
+    GET /api/v1/patients/<int:patient_id>/transactions/
+    """
+    serializer_class = TransactionSerializer
+    pagination_class = DefaultPagination
+
+    def get_queryset(self):
+        patient_id = self.kwargs.get('patient_id')
+        return Transaction.objects.filter(patient_id=patient_id).order_by('-uploaded_at')
 
 
 @api_view(['POST'])

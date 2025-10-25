@@ -51,10 +51,17 @@ api.interceptors.response.use(
 export const uploadImage = async (imageFile, patient) => {
   const formData = new FormData()
   formData.append('image', imageFile)
-  formData.append('patient_name', patient.patient_name)
-  formData.append('age', patient.age)
-  formData.append('gender', patient.gender)
-  formData.append('mrn', patient.mrn)
+  // Prefer patient_id if provided (new flow)
+  if (patient?.patient_id) {
+    formData.append('patient_id', patient.patient_id)
+  } else {
+    // Legacy fields for backward compatibility
+    formData.append('patient_name', patient.patient_name)
+    formData.append('age', patient.age)
+    formData.append('gender', patient.gender)
+    formData.append('mrn', patient.mrn)
+    if (patient.phone) formData.append('phone', patient.phone)
+  }
   
   const response = await api.post('/api/v1/upload/', formData, {
     headers: {
@@ -81,6 +88,31 @@ export const getHistory = async (page = 1, pageSize = 10) => {
 
 export const getTransaction = async (id) => {
   const response = await api.get(`/api/v1/history/${id}/`)
+  return response.data
+}
+
+// Patient APIs
+export const listPatients = async ({ page = 1, pageSize = 10, search = '' } = {}) => {
+  const response = await api.get('/api/v1/patients/', {
+    params: { page, page_size: pageSize, ...(search ? { search } : {}) },
+  })
+  return response.data
+}
+
+export const getPatient = async (id) => {
+  const response = await api.get(`/api/v1/patients/${id}/`)
+  return response.data
+}
+
+export const createPatient = async (data) => {
+  const response = await api.post('/api/v1/patients/', data)
+  return response.data
+}
+
+export const getPatientTransactions = async (id, { page = 1, pageSize = 10 } = {}) => {
+  const response = await api.get(`/api/v1/patients/${id}/transactions/`, {
+    params: { page, page_size: pageSize },
+  })
   return response.data
 }
 

@@ -2,7 +2,7 @@
 Serializers for medical diagnosis predictions API.
 """
 from rest_framework import serializers
-from .models import Transaction, UserProfile
+from .models import Transaction, UserProfile, Patient
 from django.contrib.auth.models import User
 
 
@@ -10,6 +10,21 @@ class TransactionSerializer(serializers.ModelSerializer):
     """
     Serializer for Transaction model.
     """
+    patient = serializers.PrimaryKeyRelatedField(read_only=True)
+    patient_data = serializers.SerializerMethodField()
+
+    def get_patient_data(self, obj):
+        if obj.patient:
+            return {
+                'id': obj.patient.id,
+                'full_name': obj.patient.full_name,
+                'mrn': obj.patient.mrn,
+                'phone': obj.patient.phone,
+                'age': obj.patient.age,
+                'gender': obj.patient.gender,
+            }
+        return None
+
     class Meta:
         model = Transaction
         fields = [
@@ -19,15 +34,19 @@ class TransactionSerializer(serializers.ModelSerializer):
             'confidence',
             'model_version',
             'processing_time',
-            # patient info
-            'patient_name',
-            'age',
-            'gender',
-            'mrn',
-            'phone',
+            # patient linkage
+            'patient',
+            'patient_data',
             'uploaded_at'
         ]
-        read_only_fields = ['id', 'uploaded_at']
+        read_only_fields = ['id', 'uploaded_at', 'patient']
+
+
+class PatientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Patient
+        fields = ['id', 'full_name', 'mrn', 'phone', 'age', 'gender', 'notes', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class UploadImageSerializer(serializers.Serializer):
@@ -35,11 +54,12 @@ class UploadImageSerializer(serializers.Serializer):
     Serializer for image upload requests.
     """
     image = serializers.ImageField(required=True)
+    patient_id = serializers.IntegerField(required=False)
     # patient info
-    patient_name = serializers.CharField(max_length=255)
-    age = serializers.IntegerField(min_value=0, max_value=150)
-    gender = serializers.ChoiceField(choices=['M', 'F', 'O'])
-    mrn = serializers.CharField(max_length=100)
+    patient_name = serializers.CharField(max_length=255, required=False)
+    age = serializers.IntegerField(min_value=0, max_value=150, required=False)
+    gender = serializers.ChoiceField(choices=['M', 'F', 'O'], required=False)
+    mrn = serializers.CharField(max_length=100, required=False)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
     def validate_image(self, value):
@@ -56,6 +76,25 @@ class UploadImageSerializer(serializers.Serializer):
             raise serializers.ValidationError("Only JPG and PNG images are allowed.")
         
         return value
+
+    def validate(self, attrs):
+        """Allow either patient_id or full patient fields for backward compatibility."""
+        patient_id = attrs.get('patient_id')
+        legacy_fields = ['patient_name', 'age', 'gender', 'mrn']
+        if not patient_id:
+            missing = [f for f in legacy_fields if not attrs.get(f)]
+            if missing:
+                raise serializers.ValidationError(
+                    {
+                        'patient': 'Provide either patient_id or complete patient fields (patient_name, age, gender, mrn).',
+                        'missing_fields': missing,
+                    }
+                )
+        else:
+            # If patient_id provided, ensure it exists
+            if not Patient.objects.filter(id=patient_id).exists():
+                raise serializers.ValidationError({'patient_id': 'Patient not found.'})
+        return attrs
 
 
 class RegisterSerializer(serializers.ModelSerializer):

@@ -25,9 +25,8 @@
           <thead class="bg-[#00BCD4] text-white">
             <tr>
               <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold">First Name</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold">Last Name</th>
-              <th class="px-4 py-3 text-left text-sm font-semibold">HN ID</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Patient</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">MRN</th>
               <th class="px-4 py-3 text-left text-sm font-semibold">Gender</th>
               <th class="px-4 py-3 text-left text-sm font-semibold">Phone</th>
               <th class="px-4 py-3 text-left text-sm font-semibold">Prediction/Diagnosis</th>
@@ -41,19 +40,23 @@
                 {{ formatDateShort(transaction.uploaded_at) }}
               </td>
               <td class="px-4 py-3 text-sm text-gray-900">
-                {{ getFirstName(transaction.patient_name) }}
+                <router-link 
+                  v-if="transaction.patient_data"
+                  :to="{ name: 'PatientDetail', params: { id: transaction.patient_data.id } }"
+                  class="text-[#00BCD4] hover:underline"
+                >
+                  {{ transaction.patient_data.full_name }}
+                </router-link>
+                <span v-else>-</span>
               </td>
               <td class="px-4 py-3 text-sm text-gray-900">
-                {{ getLastName(transaction.patient_name) }}
+                {{ transaction.patient_data?.mrn || '-' }}
               </td>
               <td class="px-4 py-3 text-sm text-gray-900">
-                {{ transaction.mrn }}
+                {{ getGenderText(transaction.patient_data?.gender) }}
               </td>
               <td class="px-4 py-3 text-sm text-gray-900">
-                {{ getGenderText(transaction.gender) }}
-              </td>
-              <td class="px-4 py-3 text-sm text-gray-900">
-                {{ transaction.phone || '-' }}
+                {{ transaction.patient_data?.phone || '-' }}
               </td>
               <td class="px-4 py-3 text-sm font-medium text-gray-900">
                 {{ transaction.diagnosis }}
@@ -190,18 +193,6 @@ export default {
       })
     }
 
-    const getFirstName = (fullName) => {
-      if (!fullName) return '-'
-      const parts = fullName.trim().split(' ')
-      return parts[0] || '-'
-    }
-
-    const getLastName = (fullName) => {
-      if (!fullName) return '-'
-      const parts = fullName.trim().split(' ')
-      return parts.slice(1).join(' ') || '-'
-    }
-
     const getGenderText = (gender) => {
       const map = { 'M': 'Male', 'F': 'Female', 'O': 'Other' }
       return map[gender] || gender
@@ -231,8 +222,6 @@ export default {
       refreshHistory,
       formatDate,
       formatDateShort,
-      getFirstName,
-      getLastName,
       getGenderText,
       getConfidenceColor
     }
