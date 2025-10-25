@@ -71,16 +71,30 @@ pipeline {
         dir(env.WORKDIR) {
           sh '''
             set -e
-            echo "Waiting for services to be ready..."
-            sleep 60
-            
-            echo "Running database migrations..."
-            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py makemigrations
-            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py migrate
-            
+            echo "Preparing environment args for docker-compose..."
+            EF=""
+            for p in "${ENV_FILE}" "/var/lib/jenkins/.env" "./.env"; do
+              if [ -n "$p" ] && [ -r "$p" ]; then EF="$p"; break; fi
+            done
+            if [ -n "$EF" ]; then ENV_ARG="--env-file $EF"; else ENV_ARG=""; fi
+            echo "Using env file: ${EF:-<none>}"
+
+            echo "Waiting for Postgres to be ready..."
+            # Retry until DB is ready (assumes service name 'db' uses Postgres image)
+            for i in $(seq 1 30); do
+              if docker-compose $ENV_ARG -f ${COMPOSE_FILE} exec -T db pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-medical_db}; then
+                echo "Postgres is ready"; break; fi
+              echo "DB not ready yet... ($i)"; sleep 3;
+              if [ "$i" -eq 30 ]; then echo "ERROR: DB not ready in time" >&2; exit 1; fi
+            done
+
+            echo "Running database migrations (one-off container)..."
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} run --rm backend python manage.py makemigrations
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} run --rm backend python manage.py migrate
+
             echo "Collecting static files..."
-            docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py collectstatic --noinput || true
-            
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} run --rm backend python manage.py collectstatic --noinput || true
+
             echo "✅ Migrations and static files completed"
           '''
         }
