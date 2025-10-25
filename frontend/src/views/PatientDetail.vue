@@ -67,6 +67,45 @@
       </div>
     </div>
   </AppShell>
+  
+  <!-- Result Modal -->
+  <transition name="modal">
+    <div v-if="showResult" class="fixed inset-0 z-50 flex items-center justify-center" @click="showResult = false">
+      <div class="absolute inset-0 bg-black/50"></div>
+      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden" @click.stop>
+        <div class="flex flex-col md:flex-row">
+          <div class="md:w-1/2 bg-gray-50 p-4 flex items-center justify-center">
+            <img v-if="resultTx?.image_url" :src="resultTx.image_url" alt="Uploaded" class="max-h-80 object-contain rounded-lg" />
+            <div v-else class="text-gray-400">No image</div>
+          </div>
+          <div class="md:w-1/2 p-6">
+            <h3 class="text-xl font-semibold text-[#2C597D] mb-3">Prediction Result</h3>
+            <div class="space-y-2 text-gray-700">
+              <div>
+                <span class="font-medium">Diagnosis:</span>
+                <span class="ml-2">{{ resultTx?.diagnosis || '-' }}</span>
+              </div>
+              <div>
+                <span class="font-medium">Confidence:</span>
+                <span class="ml-2">{{ resultTx?.confidence != null ? Math.round(resultTx.confidence * 100) + '%' : '-' }}</span>
+              </div>
+              <div>
+                <span class="font-medium">Model:</span>
+                <span class="ml-2">{{ resultTx?.model_version || '-' }}</span>
+              </div>
+              <div>
+                <span class="font-medium">Processed in:</span>
+                <span class="ml-2">{{ resultTx?.processing_time != null ? resultTx.processing_time + 's' : '-' }}</span>
+              </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-2">
+              <button @click="showResult = false" class="px-4 py-2 rounded-lg border">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </transition>
 </template>
 
 <script>
@@ -81,6 +120,8 @@ export default {
   components: { AppShell, UploadForm },
   setup(props, { attrs, root }) {
     const toast = useToast()
+    const showResult = ref(false)
+    const resultTx = ref(null)
     const routeId = Number(window.location.pathname.split('/').pop())
     const patient = ref(null)
     const transactions = ref([])
@@ -128,12 +169,12 @@ export default {
 
     const onUploadSuccess = (tx) => {
       refresh()
+      resultTx.value = tx
+      showResult.value = true
       try {
         const msg = `Diagnosis: ${tx.diagnosis || 'N/A'}\nConfidence: ${tx.confidence != null ? Math.round(tx.confidence * 100) + '%': 'N/A'}`
-        toast.success(msg, { timeout: 6000 })
-      } catch (_) {
-        // ignore toast error
-      }
+        toast.success(msg, { timeout: 3000 })
+      } catch (_) { /* ignore */ }
     }
 
     onMounted(() => {
@@ -141,7 +182,12 @@ export default {
       fetchTransactions()
     })
 
-    return { patient, transactions, loadingPatient, loadingTx, genderLabel, formatDate, page, pageSize, count, totalPages, go, refresh, onUploadSuccess }
+    return { patient, transactions, loadingPatient, loadingTx, genderLabel, formatDate, page, pageSize, count, totalPages, go, refresh, onUploadSuccess, showResult, resultTx }
   }
 }
 </script>
+
+<style scoped>
+.modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+</style>
