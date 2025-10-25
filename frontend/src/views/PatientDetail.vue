@@ -126,6 +126,62 @@
       </div>
     </div>
   </transition>
+
+  <!-- Edit Patient Modal -->
+  <transition name="modal">
+    <div v-if="showEdit" class="fixed inset-0 z-50 flex items-center justify-center" @click="showEdit = false">
+      <div class="absolute inset-0 bg-black/50"></div>
+      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden" @click.stop>
+        <div class="p-5 border-b">
+          <h3 class="text-lg font-semibold text-[#2C597D]">Edit Patient</h3>
+        </div>
+        <div class="p-5 space-y-4">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Full name <span class="text-red-500">*</span></label>
+            <input v-model="editForm.full_name" type="text" class="w-full border rounded px-3 py-2" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">MRN <span class="text-red-500">*</span></label>
+            <input v-model="editForm.mrn" type="text" class="w-full border rounded px-3 py-2" />
+          </div>
+          <div class="flex gap-3">
+            <div class="w-1/2">
+              <label class="block text-sm text-gray-600 mb-1">Age <span class="text-red-500">*</span></label>
+              <input v-model.number="editForm.age" type="number" class="w-full border rounded px-3 py-2" />
+            </div>
+            <div class="w-1/2">
+              <label class="block text-sm text-gray-600 mb-1">Gender <span class="text-red-500">*</span></label>
+              <div class="relative">
+                <select v-model="editForm.gender" class="w-full border rounded px-3 pr-10 py-2 appearance-none bg-white">
+                  <option value="">Select gender</option>
+                  <option value="M">Male</option>
+                  <option value="F">Female</option>
+                  <option value="O">Other</option>
+                </select>
+                <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.106l3.71-3.876a.75.75 0 011.08 1.04l-4.24 4.43a.75.75 0 01-1.08 0l-4.24-4.43a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Phone</label>
+            <input v-model="editForm.phone" type="text" class="w-full border rounded px-3 py-2" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">Notes</label>
+            <textarea v-model="editForm.notes" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+          </div>
+        </div>
+        <div class="p-5 border-t flex justify-end gap-2">
+          <button @click="showEdit = false" class="px-4 py-2 rounded-lg border">Cancel</button>
+          <button @click="saveEdit" :disabled="savingEdit" class="px-4 py-2 rounded-lg bg-[#00BCD4] text-white hover:bg-[#00ACC1] disabled:opacity-50">
+            {{ savingEdit ? 'Saving...' : 'Save' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </transition>
 </template>
 
 <script>
