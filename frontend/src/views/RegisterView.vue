@@ -180,7 +180,7 @@ export default {
         })
         
         toast.success('Account created successfully!')
-        window.location.href = '/home'
+        window.location.href = '/patients'
       } catch (e) {
         toast.error(e.message)
       } finally {

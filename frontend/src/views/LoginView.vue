@@ -90,7 +90,7 @@ export default {
         const data = await login({ username: username.value, password: password.value })
         localStorage.setItem('token', data.token)
         toast.success('Welcome!')
-        window.location.href = '/home'
+        window.location.href = '/patients'
       } catch (e) {
         toast.error(e.message)
       } finally {

@@ -19,14 +19,6 @@
         </router-link>
 
         <router-link 
-          to="/profile" 
-          class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-[#00BCD4] bg-white mr-4 border-2 border-transparent"
-          active-class="!text-orange-500 !border-orange-500"
-        >
-          <span class="font-semibold text-lg">Profile</span>
-        </router-link>
-
-        <router-link 
           to="/logout"
           @click.prevent="confirmLogout"
           class="flex items-center space-x-3 px-6 py-3 rounded-r-full hover:bg-white/10 transition group text-[#00BCD4] bg-white mr-4 border-2 border-transparent"
