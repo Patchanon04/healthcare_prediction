@@ -72,7 +72,7 @@ pipeline {
           sh '''
             set -e
             echo "Waiting for services to be ready..."
-            sleep 30
+            sleep 60
             
             echo "Running database migrations..."
             docker-compose -f ${COMPOSE_FILE} exec -T backend python manage.py makemigrations
