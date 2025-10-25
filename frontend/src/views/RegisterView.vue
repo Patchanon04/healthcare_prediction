@@ -141,12 +141,14 @@
 
 <script>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import { register, updateProfile } from '../services/api'
 
 export default {
   name: 'RegisterView',
   setup() {
+    const router = useRouter()
     const toast = useToast()
     const username = ref('')
     const fullName = ref('')
@@ -180,7 +182,7 @@ export default {
         })
         
         toast.success('Account created successfully!')
-        window.location.href = '/patients'
+        router.push('/patients')
       } catch (e) {
         toast.error(e.message)
       } finally {
