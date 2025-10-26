@@ -327,7 +327,8 @@ export default {
     const loadTreatments = async () => {
       try {
         const data = await getTreatmentPlans(props.patientId)
-        treatments.value = Array.isArray(data) ? data : []
+        // Handle both paginated response and array
+        treatments.value = data.results || (Array.isArray(data) ? data : [])
       } catch (e) {
         console.error('Failed to load treatments:', e)
         console.error('Error response:', e.response?.data)
@@ -338,7 +339,8 @@ export default {
     const loadMedications = async () => {
       try {
         const data = await getMedications(props.patientId)
-        medications.value = Array.isArray(data) ? data : []
+        // Handle both paginated response and array
+        medications.value = data.results || (Array.isArray(data) ? data : [])
       } catch (e) {
         console.error('Failed to load medications:', e)
         console.error('Error response:', e.response?.data)
@@ -349,7 +351,8 @@ export default {
     const loadFollowUps = async () => {
       try {
         const data = await getFollowUpNotes(props.patientId)
-        followups.value = Array.isArray(data) ? data : []
+        // Handle both paginated response and array
+        followups.value = data.results || (Array.isArray(data) ? data : [])
       } catch (e) {
         console.error('Failed to load follow-ups:', e)
         console.error('Error response:', e.response?.data)
