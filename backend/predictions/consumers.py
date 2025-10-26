@@ -99,11 +99,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'message': {
                     'id': str(message.id),
                     'content': message.content,
-                    'sender': {
-                        'id': self.user.id,
-                        'username': self.user.username,
-                        'full_name': getattr(self.user.profile, 'full_name', ''),
-                    },
+                    'sender': await self.get_sender_payload(),
                     'created_at': message.created_at.isoformat(),
                 }
             }
@@ -188,6 +184,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
         room.save()
         return message
     
+    @database_sync_to_async
+    def get_sender_payload(self):
+        """Safely build sender payload in sync context (may touch DB via user.profile)."""
+        full_name = ''
+        try:
+            profile = getattr(self.user, 'profile', None)
+            if profile and getattr(profile, 'full_name', None):
+                full_name = profile.full_name
+        except Exception:
+            full_name = ''
+        return {
+            'id': self.user.id,
+            'username': self.user.username,
+            'full_name': full_name,
+        }
+
     @database_sync_to_async
     def mark_messages_read(self, message_ids):
         """Mark messages as read by current user."""
