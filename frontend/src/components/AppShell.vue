@@ -29,7 +29,7 @@
         <button 
           type="button"
           @click="confirmLogout"
-          class="block w-full text-left px-6 py-3 rounded-r-full hover:bg-white/10 transition text-[#00BCD4] bg-white mr-4 border-2 border-transparent"
+          class="block text-left px-6 py-3 rounded-r-full hover:bg-white/10 transition text-[#00BCD4] bg-white mr-4 border-2 border-transparent"
         >
           <span class="font-semibold text-lg">Logout</span>
         </button>
