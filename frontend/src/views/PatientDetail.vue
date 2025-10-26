@@ -240,12 +240,14 @@ export default {
     const loadingPatient = ref(false)
     const loadingTx = ref(false)
     const showEditModal = ref(false)
+    const showEdit = ref(false)
     const activeTab = ref('history')
     const savingEdit = ref(false)
     const editForm = ref({ full_name: '', mrn: '', phone: '', age: null, gender: '', notes: '' })
 
     const page = ref(1)
     const pageSize = ref(10)
+    const count = ref(0)
     const totalPages = computed(() => Math.max(1, Math.ceil(count.value / pageSize.value)))
 
     const genderLabel = (g) => ({ M: 'Male', F: 'Female', O: 'Other' }[g] || '-')
