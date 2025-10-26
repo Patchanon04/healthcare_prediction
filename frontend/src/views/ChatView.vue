@@ -98,9 +98,9 @@
                 </div>
 
                 <!-- Message bubble -->
-                <div class="relative max-w-[70%]">
+                <div class="relative max-w-[85%]">
                   <div :class="[
-                    'rounded-2xl px-4 py-2 shadow-sm',
+                    'rounded-2xl px-4 py-2.5 shadow-sm',
                     isSelf(msg)
                       ? 'bg-[#0084FF] text-white rounded-br-md'
                       : 'bg-gray-200 text-gray-800 rounded-bl-md'
@@ -108,7 +108,7 @@
                     <p v-if="!isSelf(msg) && isFirstInGroup(idx)" class="text-xs font-semibold mb-1 opacity-80">
                       {{ msg.sender.full_name || msg.sender.username }}
                     </p>
-                    <p class="break-words text-[15px]">{{ msg.content }}</p>
+                    <p class="break-words text-[15px] leading-relaxed">{{ msg.content }}</p>
                     <div class="flex items-center gap-2 mt-1">
                       <span :class="[
                         'text-[10px]',
