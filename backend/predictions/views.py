@@ -257,7 +257,8 @@ class PatientListCreateView(generics.ListCreateAPIView):
     pagination_class = DefaultPagination
 
     def get_queryset(self):
-        qs = Patient.objects.all().order_by('-created_at')
+        # Filter patients by current user
+        qs = Patient.objects.filter(created_by=self.request.user).order_by('-created_at')
         search = self.request.query_params.get('search')
         if search:
             qs = qs.filter(
@@ -266,12 +267,19 @@ class PatientListCreateView(generics.ListCreateAPIView):
                 Q(phone__icontains=search)
             )
         return qs
+    
+    def perform_create(self, serializer):
+        """Set created_by to current user when creating patient."""
+        serializer.save(created_by=self.request.user)
 
 
 class PatientDetailView(generics.RetrieveUpdateAPIView):
     """Retrieve or update a patient by id."""
-    queryset = Patient.objects.all()
     serializer_class = PatientSerializer
+    
+    def get_queryset(self):
+        """Only allow access to own patients."""
+        return Patient.objects.filter(created_by=self.request.user)
 
 
 class PatientTransactionsView(generics.ListAPIView):

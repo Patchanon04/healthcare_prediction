@@ -39,6 +39,7 @@ class Patient(models.Model):
     Patient master record to store PII and clinical identifiers.
     """
     # Using auto-increment integer ID for simplicity
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='patients', help_text="User who created this patient")
     full_name = models.CharField(max_length=255)
     mrn = models.CharField(max_length=100, help_text="Medical Record Number", db_index=True)
     phone = models.CharField(max_length=20, blank=True, default='', help_text="Patient phone number", db_index=True)
