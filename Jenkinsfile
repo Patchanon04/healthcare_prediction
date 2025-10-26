@@ -50,16 +50,16 @@ pipeline {
 
               # Stop previous stack (same project name) and remove orphans + volumes
               # This ensures fresh database schema on every deploy
-              docker-compose $ENV_ARG -f ${COMPOSE_FILE} down -v --remove-orphans || true
+              docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} down -v --remove-orphans || true
 
               # Safety net: remove any lingering named containers from older runs
-              docker rm -f medml_backend medml_frontend medml_db medml_ml_service 2>/dev/null || true
+              docker rm -f medml_backend medml_frontend medml_db medml_ml_service medml_jenkins 2>/dev/null || true
 
               # Build without --pull so it uses local cache/base images if present
-              docker-compose $ENV_ARG -f ${COMPOSE_FILE} build
+              docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} build
 
               # Start/update services
-              docker-compose $ENV_ARG -f ${COMPOSE_FILE} up -d
+              docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d
             '''
           }
         }
@@ -82,18 +82,18 @@ pipeline {
             echo "Waiting for Postgres to be ready..."
             # Retry until DB is ready (assumes service name 'db' uses Postgres image)
             for i in $(seq 1 30); do
-              if docker-compose $ENV_ARG -f ${COMPOSE_FILE} exec -T db pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-medical_db}; then
+              if docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} exec -T db pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-medical_db}; then
                 echo "Postgres is ready"; break; fi
               echo "DB not ready yet... ($i)"; sleep 3;
               if [ "$i" -eq 30 ]; then echo "ERROR: DB not ready in time" >&2; exit 1; fi
             done
 
             echo "Running database migrations (one-off container)..."
-            docker-compose $ENV_ARG -f ${COMPOSE_FILE} run --rm backend python manage.py makemigrations
-            docker-compose $ENV_ARG -f ${COMPOSE_FILE} run --rm backend python manage.py migrate
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend python manage.py makemigrations
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend python manage.py migrate
 
             echo "Collecting static files..."
-            docker-compose $ENV_ARG -f ${COMPOSE_FILE} run --rm backend python manage.py collectstatic --noinput || true
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend python manage.py collectstatic --noinput || true
 
             echo "✅ Migrations and static files completed"
           '''
