@@ -62,7 +62,7 @@
           </div>
 
           <!-- Messages -->
-          <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-2 flex flex-col">
+          <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 flex flex-col">
             <div v-if="loadingMessages" class="text-center text-gray-500">Loading messages...</div>
             <div v-else-if="messages.length === 0" class="text-center text-gray-400">
               No messages yet. Start the conversation!
@@ -73,60 +73,62 @@
               :key="msg.id || idx"
               :class="[
                 'flex w-full',
-                isSelf(msg) ? 'justify-end' : 'justify-start'
+                isSelf(msg) ? 'justify-end' : 'justify-start',
+                !isFirstInGroup(idx) ? 'mt-0.5' : 'mt-2'
               ]"
             >
-              <!-- Other user's avatar (shown at end of group) -->
-              <div v-if="!isSelf(msg) && isLastInGroup(idx)" class="mr-2 self-end">
-                <div v-if="msg.sender?.avatar" class="w-8 h-8 rounded-full overflow-hidden border">
-                  <img :src="msg.sender.avatar" class="w-full h-full object-cover" alt="avatar" />
-                </div>
-                <div v-else class="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center text-sm font-semibold">
-                  {{ (msg.sender.full_name || msg.sender.username || '?').charAt(0).toUpperCase() }}
-                </div>
-              </div>
-
-              <div class="relative max-w-[70%]">
-                <!-- Bubble -->
+              <!-- Message container with consistent width -->
+              <div :class="[
+                'flex items-end gap-2',
+                isSelf(msg) ? 'flex-row-reverse' : 'flex-row'
+              ]">
+                <!-- Avatar (left side for others, hidden for self) -->
                 <div :class="[
-                  'rounded-2xl px-3 py-2 shadow-sm',
-                  isSelf(msg)
-                    ? 'bg-[#00BCD4] text-white'
-                    : 'bg-gray-200 text-gray-800',
-                  // tighten spacing inside a group
-                  !isFirstInGroup(idx) ? 'mt-0.5' : 'mt-2'
+                  'flex-shrink-0',
+                  isSelf(msg) ? 'w-0' : 'w-8'
                 ]">
-                  <p v-if="!isSelf(msg) && isFirstInGroup(idx)" class="text-xs font-semibold mb-1 opacity-80">
-                    {{ msg.sender.full_name || msg.sender.username }}
-                  </p>
-                  <p class="break-words">{{ msg.content }}</p>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span :class="[
-                      'text-[10px]',
-                      isSelf(msg) ? 'text-blue-100' : 'text-gray-500'
-                    ]">{{ formatTime(msg.created_at) }}</span>
-                    <!-- Delivery/Read indicators for self -->
-                    <span v-if="isSelf(msg)" class="text-[10px] select-none">
-                      <template v-if="msg.status === 'read' || msg.is_read">
-                        ✓✓
-                      </template>
-                      <template v-else>
-                        ✓
-                      </template>
-                    </span>
+                  <div v-if="!isSelf(msg) && isLastInGroup(idx)">
+                    <div v-if="msg.sender?.avatar" class="w-8 h-8 rounded-full overflow-hidden border">
+                      <img :src="msg.sender.avatar" class="w-full h-full object-cover" alt="avatar" />
+                    </div>
+                    <div v-else class="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center text-sm font-semibold">
+                      {{ (msg.sender.full_name || msg.sender.username || '?').charAt(0).toUpperCase() }}
+                    </div>
                   </div>
                 </div>
 
-                <!-- Tail -->
-                <div v-if="isLastInGroup(idx)" :class="[
-                  'absolute bottom-0 w-0 h-0 border-transparent',
-                  isSelf(msg)
-                    ? 'right-[-6px] border-l-[6px] border-l-[#00BCD4] border-t-[6px]'
-                    : 'left-[-6px] border-r-[6px] border-r-gray-200 border-t-[6px]'
-                ]"></div>
+                <!-- Message bubble -->
+                <div class="relative max-w-[70%]">
+                  <div :class="[
+                    'rounded-2xl px-4 py-2 shadow-sm',
+                    isSelf(msg)
+                      ? 'bg-[#0084FF] text-white rounded-br-md'
+                      : 'bg-gray-200 text-gray-800 rounded-bl-md'
+                  ]">
+                    <p v-if="!isSelf(msg) && isFirstInGroup(idx)" class="text-xs font-semibold mb-1 opacity-80">
+                      {{ msg.sender.full_name || msg.sender.username }}
+                    </p>
+                    <p class="break-words text-[15px]">{{ msg.content }}</p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span :class="[
+                        'text-[10px]',
+                        isSelf(msg) ? 'text-blue-100' : 'text-gray-500'
+                      ]">{{ formatTime(msg.created_at) }}</span>
+                      <!-- Delivery/Read indicators for self -->
+                      <span v-if="isSelf(msg)" class="text-[10px] select-none">
+                        <template v-if="msg.status === 'read' || msg.is_read">
+                          ✓✓
+                        </template>
+                        <template v-else>
+                          ✓
+                        </template>
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div v-if="typingUser" class="text-sm text-gray-500 italic">
+            <div v-if="typingUser" class="text-sm text-gray-500 italic mt-2">
               {{ typingUser }} is typing...
             </div>
           </div>
