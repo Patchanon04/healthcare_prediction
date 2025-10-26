@@ -124,6 +124,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message_ids = data.get('message_ids', [])
         if message_ids:
             await self.mark_messages_read(message_ids)
+            # Broadcast read receipts to room
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'messages_read',
+                    'user_id': self.user.id,
+                    'message_ids': [str(mid) for mid in message_ids],
+                }
+            )
     
     # Handlers for different message types
     async def chat_message(self, event):
@@ -161,6 +170,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'is_typing': event['is_typing'],
             }))
     
+    async def messages_read(self, event):
+        """Forward read receipt events to clients."""
+        # forward to everyone (sender will use it to toggle read checks)
+        await self.send(text_data=json.dumps({
+            'type': 'read',
+            'user_id': event['user_id'],
+            'message_ids': event['message_ids'],
+        }))
+    
     # Database operations
     @database_sync_to_async
     def check_room_membership(self):
@@ -188,16 +206,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def get_sender_payload(self):
         """Safely build sender payload in sync context (may touch DB via user.profile)."""
         full_name = ''
+        avatar_url = ''
         try:
             profile = getattr(self.user, 'profile', None)
             if profile and getattr(profile, 'full_name', None):
                 full_name = profile.full_name
+            # avatar may be ImageField/FileField, get url if available
+            if profile and getattr(profile, 'avatar', None):
+                try:
+                    if profile.avatar:
+                        avatar_url = getattr(profile.avatar, 'url', '') or str(profile.avatar)
+                except Exception:
+                    avatar_url = ''
         except Exception:
             full_name = ''
         return {
             'id': self.user.id,
             'username': self.user.username,
             'full_name': full_name,
+            'avatar': avatar_url,
         }
 
     @database_sync_to_async

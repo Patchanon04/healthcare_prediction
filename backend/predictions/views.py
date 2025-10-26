@@ -20,6 +20,8 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.authtoken.models import Token
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 from .models import Transaction, UserProfile, Patient, ChatRoom, Message
 from .serializers import (
@@ -668,5 +670,20 @@ def mark_messages_read(request, room_id):
     messages = Message.objects.filter(id__in=message_ids, room_id=room_id)
     for msg in messages:
         msg.read_by.add(request.user)
+    
+    # Broadcast read receipts to the room via Channels so other clients update badges
+    try:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"chat_{room_id}",
+            {
+                'type': 'messages_read',
+                'user_id': request.user.id,
+                'message_ids': [str(m.id) for m in messages],
+            }
+        )
+    except Exception:
+        # Non-fatal if channel layer is unavailable
+        pass
     
     return Response({'status': 'success', 'marked_count': messages.count()})

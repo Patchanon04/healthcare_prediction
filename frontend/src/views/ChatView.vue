@@ -62,36 +62,68 @@
           </div>
 
           <!-- Messages -->
-          <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
+          <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-2">
             <div v-if="loadingMessages" class="text-center text-gray-500">Loading messages...</div>
             <div v-else-if="messages.length === 0" class="text-center text-gray-400">
               No messages yet. Start the conversation!
             </div>
             <div
               v-else
-              v-for="msg in messages"
-              :key="msg.id"
+              v-for="(msg, idx) in messages"
+              :key="msg.id || idx"
               :class="[
                 'flex',
-                msg.sender.id === currentUserId ? 'justify-end' : 'justify-start'
+                isSelf(msg) ? 'justify-end' : 'justify-start'
               ]"
             >
-              <div :class="[
-                'max-w-[70%] rounded-lg p-3',
-                msg.sender.id === currentUserId 
-                  ? 'bg-[#00BCD4] text-white' 
-                  : 'bg-gray-200 text-gray-800'
-              ]">
-                <p v-if="msg.sender.id !== currentUserId" class="text-xs font-semibold mb-1">
-                  {{ msg.sender.full_name || msg.sender.username }}
-                </p>
-                <p class="break-words">{{ msg.content }}</p>
-                <p :class="[
-                  'text-xs mt-1',
-                  msg.sender.id === currentUserId ? 'text-blue-100' : 'text-gray-500'
+              <!-- Other user's avatar (shown at end of group) -->
+              <div v-if="!isSelf(msg) && isLastInGroup(idx)" class="mr-2 self-end">
+                <div v-if="msg.sender?.avatar" class="w-8 h-8 rounded-full overflow-hidden border">
+                  <img :src="msg.sender.avatar" class="w-full h-full object-cover" alt="avatar" />
+                </div>
+                <div v-else class="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center text-sm font-semibold">
+                  {{ (msg.sender.full_name || msg.sender.username || '?').charAt(0).toUpperCase() }}
+                </div>
+              </div>
+
+              <div class="relative max-w-[70%]">
+                <!-- Bubble -->
+                <div :class="[
+                  'rounded-2xl px-3 py-2 shadow-sm',
+                  isSelf(msg)
+                    ? 'bg-[#00BCD4] text-white'
+                    : 'bg-gray-200 text-gray-800',
+                  // tighten spacing inside a group
+                  !isFirstInGroup(idx) ? 'mt-0.5' : 'mt-2'
                 ]">
-                  {{ formatTime(msg.created_at) }}
-                </p>
+                  <p v-if="!isSelf(msg) && isFirstInGroup(idx)" class="text-xs font-semibold mb-1 opacity-80">
+                    {{ msg.sender.full_name || msg.sender.username }}
+                  </p>
+                  <p class="break-words">{{ msg.content }}</p>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span :class="[
+                      'text-[10px]',
+                      isSelf(msg) ? 'text-blue-100' : 'text-gray-500'
+                    ]">{{ formatTime(msg.created_at) }}</span>
+                    <!-- Delivery/Read indicators for self -->
+                    <span v-if="isSelf(msg)" class="text-[10px] select-none">
+                      <template v-if="msg.status === 'read' || msg.is_read">
+                        ✓✓
+                      </template>
+                      <template v-else>
+                        ✓
+                      </template>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Tail -->
+                <div v-if="isLastInGroup(idx)" :class="[
+                  'absolute bottom-0 w-0 h-0 border-transparent',
+                  isSelf(msg)
+                    ? 'right-[-6px] border-l-[6px] border-l-[#00BCD4] border-t-[6px]'
+                    : 'left-[-6px] border-r-[6px] border-r-gray-200 border-t-[6px]'
+                ]"></div>
               </div>
             </div>
             <div v-if="typingUser" class="text-sm text-gray-500 italic">
@@ -196,6 +228,8 @@ export default {
     const typingUser = ref(null)
     const typingTimeout = ref(null)
     const currentUserId = ref(null)
+    const currentUsername = ref(null)
+    const GROUP_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
 
     const showError = (msg) => {
       errorMessage.value = msg
@@ -228,7 +262,10 @@ export default {
       try {
         loadingMessages.value = true
         const data = await listMessages(roomId, { pageSize: 100 })
-        messages.value = data.results || []
+        messages.value = (data.results || []).map(m => ({
+          ...m,
+          status: m.is_read ? 'read' : (isSelf(m) ? 'delivered' : undefined),
+        }))
         await nextTick()
         scrollToBottom()
         
@@ -236,6 +273,8 @@ export default {
         const unreadIds = messages.value.filter(m => !m.is_read && m.sender.id !== currentUserId.value).map(m => m.id)
         if (unreadIds.length > 0) {
           await markMessagesRead(roomId, unreadIds)
+          // Locally clear unread badge for this room
+          setRoomUnread(roomId, 0)
         }
       } catch (err) {
         console.error('Failed to load messages:', err)
@@ -307,8 +346,17 @@ export default {
         
         if (data.type === 'message') {
           console.log('💬 New message:', data.message)
-          messages.value.push(data.message)
+          // Normalize status for self messages
+          const m = { ...data.message }
+          if (isSelf(m)) m.status = 'delivered'
+          messages.value.push(m)
           nextTick(() => scrollToBottom())
+          // Auto-mark as read if it's from others and we're viewing this room
+          if (!isSelf(m) && selectedRoom.value && m && selectedRoom.value.id) {
+            // fire and forget; backend will broadcast read receipt
+            markMessagesRead(selectedRoom.value.id, [m.id]).catch(() => {})
+            setRoomUnread(selectedRoom.value.id, 0)
+          }
         } else if (data.type === 'typing') {
           if (data.is_typing) {
             typingUser.value = data.username
@@ -319,13 +367,25 @@ export default {
           } else {
             typingUser.value = null
           }
+        } else if (data.type === 'read') {
+          // Mark provided message ids as read if they were sent by me
+          const readerId = data.user_id
+          if (readerId && String(readerId) !== String(currentUserId.value)) {
+            const setIds = new Set(data.message_ids || [])
+            messages.value = messages.value.map(msg => {
+              if (setIds.has(msg.id) && isSelf(msg)) {
+                return { ...msg, status: 'read', is_read: true }
+              }
+              return msg
+            })
+          } else if (readerId && String(readerId) === String(currentUserId.value) && selectedRoom.value) {
+            // If I am the reader, clear the badge for the active room
+            setRoomUnread(selectedRoom.value.id, 0)
+          }
         } else if (data.type === 'error') {
           console.error('❌ WebSocket error:', data.message)
           showError(data.message)
         }
-      }
-      
-      ws.value.onerror = (error) => {
         console.error('❌ WebSocket error:', error)
         showError('WebSocket connection error')
       }
@@ -405,6 +465,7 @@ export default {
       // Get current user ID
       const user = JSON.parse(localStorage.getItem('user') || '{}')
       currentUserId.value = user.id
+      currentUsername.value = user.username || null
       
       await fetchRooms()
       await fetchUsers()
@@ -415,6 +476,57 @@ export default {
         ws.value.close()
       }
     })
+
+    const isSelf = (msg) => {
+      const sid = msg?.sender?.id
+      const suser = msg?.sender?.username
+      // match by id (string-safe) or by username fallback
+      if (sid != null && currentUserId.value != null) {
+        if (String(sid) === String(currentUserId.value)) return true
+      }
+      if (suser && currentUsername.value) {
+        if (suser === currentUsername.value) return true
+      }
+      return false
+    }
+
+    const sameSender = (a, b) => {
+      if (!a || !b) return false
+      const aid = a?.sender?.id, bid = b?.sender?.id
+      if (aid != null && bid != null) return String(aid) === String(bid)
+      const au = a?.sender?.username, bu = b?.sender?.username
+      if (au && bu) return au === bu
+      return false
+    }
+
+    const closeInTime = (a, b) => {
+      if (!a || !b) return false
+      const ta = new Date(a.created_at).getTime()
+      const tb = new Date(b.created_at).getTime()
+      return Math.abs(tb - ta) <= GROUP_WINDOW_MS
+    }
+
+    const isFirstInGroup = (index) => {
+      const msg = messages.value[index]
+      const prev = messages.value[index - 1]
+      if (!prev) return true
+      return !(sameSender(msg, prev) && closeInTime(msg, prev))
+    }
+
+    const isLastInGroup = (index) => {
+      const msg = messages.value[index]
+      const next = messages.value[index + 1]
+      if (!next) return true
+      return !(sameSender(msg, next) && closeInTime(msg, next))
+    }
+
+    // Helper: update unread_count for a room locally
+    const setRoomUnread = (roomId, value) => {
+      rooms.value = rooms.value.map(r => r.id === roomId ? { ...r, unread_count: value } : r)
+      if (selectedRoom.value && selectedRoom.value.id === roomId) {
+        selectedRoom.value = { ...selectedRoom.value, unread_count: value }
+      }
+    }
 
     return {
       rooms,
@@ -432,12 +544,17 @@ export default {
       messagesContainer,
       typingUser,
       currentUserId,
+      currentUsername,
       selectRoom,
       createRoom,
       sendMessageHandler,
       handleTyping,
       getRoomName,
       formatTime,
+      isSelf,
+      isFirstInGroup,
+      isLastInGroup,
+      setRoomUnread,
     }
   }
 }
