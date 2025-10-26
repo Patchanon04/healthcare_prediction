@@ -82,10 +82,17 @@ async def predict_diagnosis(request: PredictionRequest):
     
     try:
         # Simulate image download and validation
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             try:
+                # First, try a HEAD request (fast path)
                 response = await client.head(str(request.image_url))
-                if response.status_code not in [200, 302, 301]:
+                if response.status_code >= 400:
+                    # Some servers don't support HEAD correctly; fallback to a tiny GET
+                    response = await client.get(
+                        str(request.image_url),
+                        headers={"Range": "bytes=0-0"}
+                    )
+                if response.status_code >= 400:
                     raise HTTPException(
                         status_code=400,
                         detail=f"Unable to access image URL: {response.status_code}"
