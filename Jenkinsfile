@@ -52,14 +52,14 @@ pipeline {
               # This ensures fresh database schema on every deploy
               docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} down -v --remove-orphans || true
 
-              # Safety net: remove any lingering named containers from older runs
-              docker rm -f medml_backend medml_frontend medml_db medml_ml_service medml_jenkins 2>/dev/null || true
+              # Safety net: remove any lingering named containers from older runs (except Jenkins itself)
+              docker rm -f medml_backend medml_frontend medml_db medml_ml_service 2>/dev/null || true
 
               # Build without --pull so it uses local cache/base images if present
               docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} build
 
-              # Start/update services
-              docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d
+              # Start/update services (exclude Jenkins to avoid self-conflict)
+              docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d --scale jenkins=0
             '''
           }
         }
