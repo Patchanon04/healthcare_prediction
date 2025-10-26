@@ -282,7 +282,16 @@ export default {
       const token = localStorage.getItem('token')
       // Use backend URL for WebSocket (not frontend URL)
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const backendHost = import.meta.env.VITE_API_URL?.replace('http://', '').replace('https://', '') || 'localhost:8000'
+      
+      // Get API URL from env or fallback to current host
+      let backendHost = 'localhost:8000'
+      if (import.meta && import.meta.env && import.meta.env.VITE_API_URL) {
+        backendHost = import.meta.env.VITE_API_URL.replace('http://', '').replace('https://', '')
+      } else if (window.location.hostname !== 'localhost') {
+        // If not localhost, use current hostname with port 8000
+        backendHost = `${window.location.hostname}:8000`
+      }
+      
       const wsUrl = `${wsProtocol}//${backendHost}/ws/chat/${roomId}/?token=${token}`
       
       console.log('Connecting to WebSocket:', wsUrl)

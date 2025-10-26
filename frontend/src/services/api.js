@@ -1,10 +1,25 @@
 import axios from 'axios'
 
+// Get API URL from environment or fallback
+const getApiUrl = () => {
+  // Try Vite env first
+  if (import.meta && import.meta.env && import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+  // Try Vue CLI env (legacy)
+  if (process.env.VUE_APP_API_URL) {
+    return process.env.VUE_APP_API_URL
+  }
+  // Fallback: empty string (same-origin)
+  return ''
+}
+
 // Create axios instance with default config
+const apiUrl = getApiUrl()
+console.log('🔧 API Base URL:', apiUrl || '(same-origin)')
+
 const api = axios.create({
-  // Use same-origin by default so requests go through Nginx proxy (/api -> backend)
-  // Allow override via VUE_APP_API_URL for dev or explicit deployments
-  baseURL: process.env.VUE_APP_API_URL || '',
+  baseURL: apiUrl,
   timeout: 60000,
   // Do not set a static Content-Type here. We'll set it per-request in the interceptor
 })
