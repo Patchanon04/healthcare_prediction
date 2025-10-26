@@ -326,25 +326,34 @@ export default {
     // Load data
     const loadTreatments = async () => {
       try {
-        treatments.value = await getTreatmentPlans(props.patientId)
+        const data = await getTreatmentPlans(props.patientId)
+        treatments.value = Array.isArray(data) ? data : []
       } catch (e) {
         console.error('Failed to load treatments:', e)
+        console.error('Error response:', e.response?.data)
+        treatments.value = []
       }
     }
 
     const loadMedications = async () => {
       try {
-        medications.value = await getMedications(props.patientId)
+        const data = await getMedications(props.patientId)
+        medications.value = Array.isArray(data) ? data : []
       } catch (e) {
         console.error('Failed to load medications:', e)
+        console.error('Error response:', e.response?.data)
+        medications.value = []
       }
     }
 
     const loadFollowUps = async () => {
       try {
-        followups.value = await getFollowUpNotes(props.patientId)
+        const data = await getFollowUpNotes(props.patientId)
+        followups.value = Array.isArray(data) ? data : []
       } catch (e) {
         console.error('Failed to load follow-ups:', e)
+        console.error('Error response:', e.response?.data)
+        followups.value = []
       }
     }
 
@@ -354,6 +363,8 @@ export default {
         timeline.value = data.events || []
       } catch (e) {
         console.error('Failed to load timeline:', e)
+        console.error('Error response:', e.response?.data)
+        timeline.value = []
       }
     }
 
