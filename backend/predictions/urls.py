@@ -36,4 +36,12 @@ urlpatterns = [
     path('chat/unread-count/', views.get_unread_count, name='unread-count'),
     # global search
     path('search/', views.global_search, name='global-search'),
+    # treatment management
+    path('patients/<int:patient_id>/treatments/', views.TreatmentPlanListCreateView.as_view(), name='patient-treatments'),
+    path('patients/<int:patient_id>/treatments/<uuid:pk>/', views.TreatmentPlanDetailView.as_view(), name='patient-treatment-detail'),
+    path('patients/<int:patient_id>/medications/', views.MedicationListCreateView.as_view(), name='patient-medications'),
+    path('patients/<int:patient_id>/medications/<uuid:pk>/', views.MedicationDetailView.as_view(), name='patient-medication-detail'),
+    path('patients/<int:patient_id>/followups/', views.FollowUpNoteListCreateView.as_view(), name='patient-followups'),
+    path('patients/<int:patient_id>/followups/<uuid:pk>/', views.FollowUpNoteDetailView.as_view(), name='patient-followup-detail'),
+    path('patients/<int:patient_id>/timeline/', views.patient_timeline, name='patient-timeline'),
 ]

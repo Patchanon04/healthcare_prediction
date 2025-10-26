@@ -250,4 +250,70 @@ export const globalSearch = async (query) => {
   return response.data
 }
 
+// Treatment Management APIs
+export const getTreatmentPlans = async (patientId) => {
+  const response = await api.get(`/api/v1/patients/${patientId}/treatments/`)
+  return response.data
+}
+
+export const createTreatmentPlan = async (patientId, data) => {
+  const response = await api.post(`/api/v1/patients/${patientId}/treatments/`, data)
+  return response.data
+}
+
+export const updateTreatmentPlan = async (patientId, treatmentId, data) => {
+  const response = await api.put(`/api/v1/patients/${patientId}/treatments/${treatmentId}/`, data)
+  return response.data
+}
+
+export const deleteTreatmentPlan = async (patientId, treatmentId) => {
+  const response = await api.delete(`/api/v1/patients/${patientId}/treatments/${treatmentId}/`)
+  return response.data
+}
+
+export const getMedications = async (patientId) => {
+  const response = await api.get(`/api/v1/patients/${patientId}/medications/`)
+  return response.data
+}
+
+export const createMedication = async (patientId, data) => {
+  const response = await api.post(`/api/v1/patients/${patientId}/medications/`, data)
+  return response.data
+}
+
+export const updateMedication = async (patientId, medicationId, data) => {
+  const response = await api.put(`/api/v1/patients/${patientId}/medications/${medicationId}/`, data)
+  return response.data
+}
+
+export const deleteMedication = async (patientId, medicationId) => {
+  const response = await api.delete(`/api/v1/patients/${patientId}/medications/${medicationId}/`)
+  return response.data
+}
+
+export const getFollowUpNotes = async (patientId) => {
+  const response = await api.get(`/api/v1/patients/${patientId}/followups/`)
+  return response.data
+}
+
+export const createFollowUpNote = async (patientId, data) => {
+  const response = await api.post(`/api/v1/patients/${patientId}/followups/`, data)
+  return response.data
+}
+
+export const updateFollowUpNote = async (patientId, noteId, data) => {
+  const response = await api.put(`/api/v1/patients/${patientId}/followups/${noteId}/`, data)
+  return response.data
+}
+
+export const deleteFollowUpNote = async (patientId, noteId) => {
+  const response = await api.delete(`/api/v1/patients/${patientId}/followups/${noteId}/`)
+  return response.data
+}
+
+export const getPatientTimeline = async (patientId) => {
+  const response = await api.get(`/api/v1/patients/${patientId}/timeline/`)
+  return response.data
+}
+
 export default api

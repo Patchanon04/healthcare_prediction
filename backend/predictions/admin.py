@@ -2,7 +2,7 @@
 Admin configuration for predictions app.
 """
 from django.contrib import admin
-from .models import Transaction, Patient, ChatRoom, Message
+from .models import Transaction, Patient, ChatRoom, Message, TreatmentPlan, Medication, FollowUpNote
 
 
 @admin.register(Transaction)
@@ -67,3 +67,27 @@ class MessageAdmin(admin.ModelAdmin):
     def content_preview(self, obj):
         return obj.content[:50] + '...' if len(obj.content) > 50 else obj.content
     content_preview.short_description = 'Content'
+
+
+@admin.register(TreatmentPlan)
+class TreatmentPlanAdmin(admin.ModelAdmin):
+    list_display = ['id', 'patient', 'title', 'status', 'start_date', 'end_date', 'created_by', 'created_at']
+    list_filter = ['status', 'start_date', 'created_at']
+    search_fields = ['title', 'description', 'patient__full_name', 'patient__mrn']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+
+
+@admin.register(Medication)
+class MedicationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'patient', 'drug_name', 'dosage', 'frequency', 'status', 'start_date', 'end_date']
+    list_filter = ['status', 'start_date']
+    search_fields = ['drug_name', 'patient__full_name', 'patient__mrn']
+    readonly_fields = ['id', 'created_at', 'updated_at']
+
+
+@admin.register(FollowUpNote)
+class FollowUpNoteAdmin(admin.ModelAdmin):
+    list_display = ['id', 'patient', 'title', 'note_type', 'created_by', 'created_at']
+    list_filter = ['note_type', 'created_at']
+    search_fields = ['title', 'note', 'patient__full_name', 'patient__mrn']
+    readonly_fields = ['id', 'created_at', 'updated_at']

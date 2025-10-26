@@ -2,7 +2,7 @@
 Serializers for medical diagnosis predictions API.
 """
 from rest_framework import serializers
-from .models import Transaction, UserProfile, Patient, ChatRoom, Message
+from .models import Transaction, UserProfile, Patient, ChatRoom, Message, TreatmentPlan, Medication, FollowUpNote
 from django.contrib.auth.models import User
 
 
@@ -228,3 +228,76 @@ class ChatRoomSerializer(serializers.ModelSerializer):
             room.members.add(request.user)
         
         return room
+
+
+# ==================== Treatment Management Serializers ====================
+
+class TreatmentPlanSerializer(serializers.ModelSerializer):
+    """Serializer for TreatmentPlan model."""
+    created_by_name = serializers.SerializerMethodField()
+    patient_name = serializers.SerializerMethodField()
+    
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            profile = getattr(obj.created_by, 'profile', None)
+            return profile.full_name if profile and profile.full_name else obj.created_by.username
+        return None
+    
+    def get_patient_name(self, obj):
+        return obj.patient.full_name if obj.patient else None
+    
+    class Meta:
+        model = TreatmentPlan
+        fields = [
+            'id', 'patient', 'patient_name', 'diagnosis', 'title', 'description',
+            'start_date', 'end_date', 'status', 'created_by', 'created_by_name',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class MedicationSerializer(serializers.ModelSerializer):
+    """Serializer for Medication model."""
+    prescribed_by_name = serializers.SerializerMethodField()
+    patient_name = serializers.SerializerMethodField()
+    
+    def get_prescribed_by_name(self, obj):
+        if obj.prescribed_by:
+            profile = getattr(obj.prescribed_by, 'profile', None)
+            return profile.full_name if profile and profile.full_name else obj.prescribed_by.username
+        return None
+    
+    def get_patient_name(self, obj):
+        return obj.patient.full_name if obj.patient else None
+    
+    class Meta:
+        model = Medication
+        fields = [
+            'id', 'patient', 'patient_name', 'treatment_plan', 'drug_name', 'dosage',
+            'frequency', 'route', 'instructions', 'start_date', 'end_date', 'status',
+            'prescribed_by', 'prescribed_by_name', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class FollowUpNoteSerializer(serializers.ModelSerializer):
+    """Serializer for FollowUpNote model."""
+    created_by_name = serializers.SerializerMethodField()
+    patient_name = serializers.SerializerMethodField()
+    
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            profile = getattr(obj.created_by, 'profile', None)
+            return profile.full_name if profile and profile.full_name else obj.created_by.username
+        return None
+    
+    def get_patient_name(self, obj):
+        return obj.patient.full_name if obj.patient else None
+    
+    class Meta:
+        model = FollowUpNote
+        fields = [
+            'id', 'patient', 'patient_name', 'treatment_plan', 'title', 'note',
+            'note_type', 'created_by', 'created_by_name', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']

@@ -142,3 +142,112 @@ class Message(models.Model):
     
     def __str__(self):
         return f"{self.sender.username}: {self.content[:50]}"
+
+
+# ==================== Treatment Management Models ====================
+
+class TreatmentPlan(models.Model):
+    """
+    Treatment plan for a patient.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='treatment_plans')
+    diagnosis = models.ForeignKey(Transaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='treatment_plans', help_text="Related diagnosis/transaction")
+    title = models.CharField(max_length=200, help_text="Treatment plan title")
+    description = models.TextField(help_text="Detailed treatment plan")
+    start_date = models.DateField(help_text="Treatment start date")
+    end_date = models.DateField(null=True, blank=True, help_text="Expected end date")
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('active', 'Active'),
+            ('completed', 'Completed'),
+            ('cancelled', 'Cancelled'),
+        ],
+        default='active'
+    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_treatment_plans')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'treatment_plans'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['patient', '-created_at'], name='patient_treatment_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.patient.full_name} - {self.title}"
+
+
+class Medication(models.Model):
+    """
+    Medication history for a patient.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='medications')
+    treatment_plan = models.ForeignKey(TreatmentPlan, on_delete=models.SET_NULL, null=True, blank=True, related_name='medications')
+    drug_name = models.CharField(max_length=200, help_text="Medication name")
+    dosage = models.CharField(max_length=100, help_text="Dosage (e.g., 500mg)")
+    frequency = models.CharField(max_length=100, help_text="Frequency (e.g., twice daily)")
+    route = models.CharField(max_length=50, blank=True, help_text="Route of administration (e.g., oral, IV)")
+    instructions = models.TextField(blank=True, help_text="Special instructions")
+    start_date = models.DateField(help_text="Start date")
+    end_date = models.DateField(null=True, blank=True, help_text="End date")
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('active', 'Active'),
+            ('completed', 'Completed'),
+            ('discontinued', 'Discontinued'),
+        ],
+        default='active'
+    )
+    prescribed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='prescribed_medications')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'medications'
+        ordering = ['-start_date']
+        indexes = [
+            models.Index(fields=['patient', '-start_date'], name='patient_medication_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.patient.full_name} - {self.drug_name}"
+
+
+class FollowUpNote(models.Model):
+    """
+    Follow-up notes for tracking patient progress.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='followup_notes')
+    treatment_plan = models.ForeignKey(TreatmentPlan, on_delete=models.SET_NULL, null=True, blank=True, related_name='followup_notes')
+    title = models.CharField(max_length=200, help_text="Note title")
+    note = models.TextField(help_text="Follow-up note content")
+    note_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('checkup', 'Check-up'),
+            ('progress', 'Progress Update'),
+            ('complication', 'Complication'),
+            ('other', 'Other'),
+        ],
+        default='progress'
+    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_followup_notes')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'followup_notes'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['patient', '-created_at'], name='patient_followup_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.patient.full_name} - {self.title}"

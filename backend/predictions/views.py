@@ -23,7 +23,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from .models import Transaction, UserProfile, Patient, ChatRoom, Message
+from .models import Transaction, UserProfile, Patient, ChatRoom, Message, TreatmentPlan, Medication, FollowUpNote
 from .serializers import (
     TransactionSerializer,
     UploadImageSerializer,
@@ -34,6 +34,9 @@ from .serializers import (
     MessageSerializer,
     UserBasicSerializer,
     PatientSerializer,
+    TreatmentPlanSerializer,
+    MedicationSerializer,
+    FollowUpNoteSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -787,3 +790,147 @@ def global_search(request):
             'total': 0,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ==================== Treatment Management API Views ====================
+
+class TreatmentPlanListCreateView(generics.ListCreateAPIView):
+    """List and create treatment plans for a patient."""
+    serializer_class = TreatmentPlanSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        patient_id = self.kwargs.get('patient_id')
+        return TreatmentPlan.objects.filter(patient_id=patient_id)
+    
+    def perform_create(self, serializer):
+        patient_id = self.kwargs.get('patient_id')
+        patient = Patient.objects.get(id=patient_id)
+        serializer.save(patient=patient, created_by=self.request.user)
+
+
+class TreatmentPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete a treatment plan."""
+    serializer_class = TreatmentPlanSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        patient_id = self.kwargs.get('patient_id')
+        return TreatmentPlan.objects.filter(patient_id=patient_id)
+
+
+class MedicationListCreateView(generics.ListCreateAPIView):
+    """List and create medications for a patient."""
+    serializer_class = MedicationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        patient_id = self.kwargs.get('patient_id')
+        return Medication.objects.filter(patient_id=patient_id)
+    
+    def perform_create(self, serializer):
+        patient_id = self.kwargs.get('patient_id')
+        patient = Patient.objects.get(id=patient_id)
+        serializer.save(patient=patient, prescribed_by=self.request.user)
+
+
+class MedicationDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete a medication."""
+    serializer_class = MedicationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        patient_id = self.kwargs.get('patient_id')
+        return Medication.objects.filter(patient_id=patient_id)
+
+
+class FollowUpNoteListCreateView(generics.ListCreateAPIView):
+    """List and create follow-up notes for a patient."""
+    serializer_class = FollowUpNoteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        patient_id = self.kwargs.get('patient_id')
+        return FollowUpNote.objects.filter(patient_id=patient_id)
+    
+    def perform_create(self, serializer):
+        patient_id = self.kwargs.get('patient_id')
+        patient = Patient.objects.get(id=patient_id)
+        serializer.save(patient=patient, created_by=self.request.user)
+
+
+class FollowUpNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete a follow-up note."""
+    serializer_class = FollowUpNoteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        patient_id = self.kwargs.get('patient_id')
+        return FollowUpNote.objects.filter(patient_id=patient_id)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def patient_timeline(request, patient_id):
+    """
+    Get complete timeline for a patient including:
+    - Diagnoses (transactions)
+    - Treatment plans
+    - Medications
+    - Follow-up notes
+    """
+    try:
+        patient = Patient.objects.get(id=patient_id)
+    except Patient.DoesNotExist:
+        return Response({'error': 'Patient not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Gather all events
+    events = []
+    
+    # Diagnoses
+    from .serializers import TransactionSerializer, TreatmentPlanSerializer, MedicationSerializer, FollowUpNoteSerializer
+    
+    diagnoses = Transaction.objects.filter(patient=patient).order_by('-uploaded_at')
+    for diag in diagnoses:
+        events.append({
+            'type': 'diagnosis',
+            'date': diag.uploaded_at.isoformat(),
+            'data': TransactionSerializer(diag).data
+        })
+    
+    # Treatment plans
+    treatments = TreatmentPlan.objects.filter(patient=patient).order_by('-start_date')
+    for treatment in treatments:
+        events.append({
+            'type': 'treatment',
+            'date': treatment.start_date.isoformat(),
+            'data': TreatmentPlanSerializer(treatment).data
+        })
+    
+    # Medications
+    medications = Medication.objects.filter(patient=patient).order_by('-start_date')
+    for med in medications:
+        events.append({
+            'type': 'medication',
+            'date': med.start_date.isoformat(),
+            'data': MedicationSerializer(med).data
+        })
+    
+    # Follow-up notes
+    notes = FollowUpNote.objects.filter(patient=patient).order_by('-created_at')
+    for note in notes:
+        events.append({
+            'type': 'followup',
+            'date': note.created_at.isoformat(),
+            'data': FollowUpNoteSerializer(note).data
+        })
+    
+    # Sort by date (newest first)
+    events.sort(key=lambda x: x['date'], reverse=True)
+    
+    return Response({
+        'patient_id': patient_id,
+        'patient_name': patient.full_name,
+        'events': events,
+        'total': len(events)
+    })

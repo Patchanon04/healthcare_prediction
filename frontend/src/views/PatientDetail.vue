@@ -24,10 +24,39 @@
         </div>
       </div>
 
-      <!-- History -->
+      <!-- Tabs: History & Treatment -->
       <div class="bg-white rounded-xl shadow p-6 lg:col-span-2">
+        <div class="border-b border-gray-200 mb-4">
+          <nav class="-mb-px flex space-x-8">
+            <button
+              @click="activeTab = 'history'"
+              :class="[
+                activeTab === 'history'
+                  ? 'border-[#00BCD4] text-[#00BCD4]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
+              ]"
+            >
+              History
+            </button>
+            <button
+              @click="activeTab = 'treatment'"
+              :class="[
+                activeTab === 'treatment'
+                  ? 'border-[#00BCD4] text-[#00BCD4]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
+              ]"
+            >
+              Treatment
+            </button>
+          </nav>
+        </div>
+
+        <!-- History Tab -->
+        <div v-if="activeTab === 'history'">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">History</h3>
+          <h3 class="text-lg font-semibold">Diagnosis History</h3>
           <div class="flex gap-2">
             <button @click="refresh" class="px-3 py-1 border rounded">Refresh</button>
           </div>
@@ -66,6 +95,12 @@
             <span class="px-3 py-1">Page {{ page }} of {{ totalPages }}</span>
             <button :disabled="page===totalPages" @click="go(page+1)" class="px-3 py-1 border rounded disabled:opacity-50">Next</button>
           </div>
+        </div>
+        </div>
+
+        <!-- Treatment Tab -->
+        <div v-if="activeTab === 'treatment'">
+          <TreatmentManagement :patient-id="Number($route.params.id)" />
         </div>
       </div>
     </div>
@@ -189,11 +224,12 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import AppShell from '../components/AppShell.vue'
 import UploadForm from '../components/UploadForm.vue'
+import TreatmentManagement from '../components/TreatmentManagement.vue'
 import { getPatient, getPatientTransactions, updatePatient } from '../services/api'
 
 export default {
   name: 'PatientDetail',
-  components: { AppShell, UploadForm },
+  components: { AppShell, UploadForm, TreatmentManagement },
   setup(props, { attrs, root }) {
     const toast = useToast()
     const showResult = ref(false)
@@ -201,15 +237,15 @@ export default {
     const routeId = Number(window.location.pathname.split('/').pop())
     const patient = ref(null)
     const transactions = ref([])
-    const loadingPatient = ref(true)
-    const loadingTx = ref(true)
-    const showEdit = ref(false)
+    const loadingPatient = ref(false)
+    const loadingTx = ref(false)
+    const showEditModal = ref(false)
+    const activeTab = ref('history')
     const savingEdit = ref(false)
     const editForm = ref({ full_name: '', mrn: '', phone: '', age: null, gender: '', notes: '' })
 
     const page = ref(1)
     const pageSize = ref(10)
-    const count = ref(0)
     const totalPages = computed(() => Math.max(1, Math.ceil(count.value / pageSize.value)))
 
     const genderLabel = (g) => ({ M: 'Male', F: 'Female', O: 'Other' }[g] || '-')
@@ -300,7 +336,7 @@ export default {
       fetchTransactions()
     })
 
-    return { patient, transactions, loadingPatient, loadingTx, genderLabel, formatDate, page, pageSize, count, totalPages, go, refresh, onUploadSuccess, showResult, resultTx, getConfidenceBadge, showEdit, editForm, savingEdit, openEdit, saveEdit }
+    return { patient, transactions, loadingPatient, loadingTx, genderLabel, formatDate, page, pageSize, count, totalPages, go, refresh, onUploadSuccess, showResult, resultTx, getConfidenceBadge, showEdit, editForm, savingEdit, openEdit, saveEdit, activeTab }
   }
 }
 </script>
