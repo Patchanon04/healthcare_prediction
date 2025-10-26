@@ -3,7 +3,7 @@ Tests for predictions API.
 """
 import uuid
 from unittest.mock import patch, MagicMock
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -92,6 +92,7 @@ class UploadImageTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
     
+    @override_settings(USE_S3=False, MEDIA_ROOT='/tmp/test_media')
     @patch('predictions.views.call_ml_service')
     @patch('predictions.views.default_storage.save')
     def test_upload_image_success(self, mock_storage, mock_ml_service):
@@ -123,6 +124,7 @@ class UploadImageTestCase(TestCase):
         self.assertIn('confidence', data)
         self.assertEqual(data['breed'], 'Labrador Retriever')
     
+    @override_settings(USE_S3=False, MEDIA_ROOT='/tmp/test_media')
     def test_upload_no_image(self):
         """Test upload without image file."""
         response = self.client.post('/api/v1/upload/', {}, format='multipart')
