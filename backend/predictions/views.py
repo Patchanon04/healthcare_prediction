@@ -490,3 +490,101 @@ def metrics_diagnosis_distribution(request):
     )
     data = [{'diagnosis': row['diagnosis'], 'count': row['count']} for row in qs]
     return Response({'distribution': data})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def reports_summary(request):
+    """
+    Generate comprehensive report data for a date range.
+    GET /api/v1/reports/summary/?start=YYYY-MM-DD&end=YYYY-MM-DD
+    
+    Returns:
+    - summary: total_patients, total_predictions, avg_confidence
+    - daily_series: count per day
+    - diagnosis_distribution: breakdown by diagnosis
+    - recent_transactions: sample transactions (max 100)
+    """
+    from datetime import datetime, timedelta
+    
+    # Parse date range
+    start_str = request.query_params.get('start')
+    end_str = request.query_params.get('end')
+    
+    try:
+        if start_str and end_str:
+            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+        else:
+            # Default: last 14 days
+            end_date = timezone.localdate()
+            start_date = end_date - timedelta(days=13)
+    except ValueError:
+        return Response({'error': 'Invalid date format. Use YYYY-MM-DD'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validate range
+    if start_date > end_date:
+        return Response({'error': 'start date must be before end date'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Filter transactions by date range
+    transactions_qs = Transaction.objects.filter(
+        uploaded_at__date__gte=start_date,
+        uploaded_at__date__lte=end_date
+    )
+    
+    # Summary stats
+    total_predictions = transactions_qs.count()
+    avg_confidence = transactions_qs.aggregate(avg=Avg('confidence'))['avg'] or 0
+    
+    # Count unique patients in this range
+    total_patients = transactions_qs.values('patient').distinct().count()
+    
+    # Daily series
+    daily_qs = (
+        transactions_qs
+        .annotate(day=TruncDate('uploaded_at'))
+        .values('day')
+        .annotate(count=Count('id'))
+        .order_by('day')
+    )
+    daily_series = [{'date': str(row['day']), 'count': row['count']} for row in daily_qs]
+    
+    # Diagnosis distribution
+    diagnosis_qs = (
+        transactions_qs
+        .exclude(diagnosis__isnull=True)
+        .exclude(diagnosis='')
+        .values('diagnosis')
+        .annotate(count=Count('id'))
+        .order_by('-count')
+    )
+    diagnosis_distribution = [{'diagnosis': row['diagnosis'], 'count': row['count']} for row in diagnosis_qs]
+    
+    # Recent transactions (max 100 for PDF)
+    recent_transactions = transactions_qs.order_by('-uploaded_at')[:100]
+    transactions_data = []
+    for txn in recent_transactions:
+        transactions_data.append({
+            'id': str(txn.id),
+            'uploaded_at': txn.uploaded_at.isoformat(),
+            'patient_name': txn.patient.full_name if txn.patient else 'N/A',
+            'patient_mrn': txn.patient.mrn if txn.patient else 'N/A',
+            'diagnosis': txn.diagnosis,
+            'confidence': round(txn.confidence, 2),
+            'model_version': txn.model_version,
+        })
+    
+    return Response({
+        'date_range': {
+            'start': str(start_date),
+            'end': str(end_date),
+        },
+        'summary': {
+            'total_patients': total_patients,
+            'total_predictions': total_predictions,
+            'avg_confidence': round(avg_confidence, 2),
+        },
+        'daily_series': daily_series,
+        'diagnosis_distribution': diagnosis_distribution,
+        'recent_transactions': transactions_data,
+    })

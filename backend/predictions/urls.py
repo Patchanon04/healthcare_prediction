@@ -25,4 +25,6 @@ urlpatterns = [
     path('metrics/summary/', views.metrics_summary, name='metrics-summary'),
     path('metrics/daily/', views.metrics_daily, name='metrics-daily'),
     path('metrics/diagnosis-distribution/', views.metrics_diagnosis_distribution, name='metrics-diagnosis'),
+    # reports
+    path('reports/summary/', views.reports_summary, name='reports-summary'),
 ]
