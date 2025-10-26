@@ -10,8 +10,8 @@ pipeline {
     WORKDIR = '.'
     // ใช้ชื่อโปรเจกต์คงที่เพื่อให้ down/up กระทบ stack เดียวกันเสมอ
     COMPOSE_PROJECT_NAME = 'medml'
-    // ชี้ไปยังไฟล์ .env ของ production บน EC2 (ปรับได้ตามที่วางไฟล์จริง)
-    ENV_FILE = '/home/ubuntu/healthcare_prediction/.env'
+    // ชี้ไปยังไฟล์ .env ภายใน Jenkins container
+    ENV_FILE = '/var/jenkins_home/.env'
   }
   stages {
     stage('Checkout') {
