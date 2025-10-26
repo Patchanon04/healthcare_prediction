@@ -128,15 +128,72 @@
           
           <!-- User Profile -->
           <div class="flex items-center space-x-4">
-            <!-- Notification Badge -->
-            <router-link to="/chat" class="relative p-2 hover:bg-gray-50 rounded-lg transition group">
-              <svg class="w-6 h-6 text-gray-600 group-hover:text-[#00BCD4] transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-              </svg>
-              <span v-if="unreadCount > 0" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full min-w-[20px]">
-                {{ unreadCount > 99 ? '99+' : unreadCount }}
-              </span>
-            </router-link>
+            <!-- Notification Dropdown -->
+            <div class="relative">
+              <button 
+                @click="toggleNotifications" 
+                class="relative p-2 hover:bg-gray-50 rounded-lg transition group"
+              >
+                <svg class="w-6 h-6 text-gray-600 group-hover:text-[#00BCD4] transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                </svg>
+                <span v-if="unreadCount > 0" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full min-w-[20px]">
+                  {{ unreadCount > 99 ? '99+' : unreadCount }}
+                </span>
+              </button>
+
+              <!-- Notification Dropdown Panel -->
+              <transition name="dropdown">
+                <div v-if="showNotifications" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border z-50 max-h-96 overflow-hidden flex flex-col">
+                  <div class="px-4 py-3 border-b bg-gray-50">
+                    <h3 class="font-semibold text-gray-800">Notifications</h3>
+                  </div>
+                  
+                  <div v-if="loadingNotifications" class="p-4 text-center text-gray-500">
+                    Loading...
+                  </div>
+                  
+                  <div v-else-if="notifications.length === 0" class="p-8 text-center text-gray-500">
+                    <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                    </svg>
+                    <p class="text-sm">No new notifications</p>
+                  </div>
+                  
+                  <div v-else class="overflow-y-auto flex-1">
+                    <router-link
+                      v-for="notif in notifications"
+                      :key="notif.room_id"
+                      :to="`/chat?room=${notif.room_id}`"
+                      @click="closeNotifications"
+                      class="block px-4 py-3 hover:bg-gray-50 transition border-b last:border-b-0"
+                    >
+                      <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] text-white flex items-center justify-center font-semibold flex-shrink-0">
+                          {{ notif.room_name.charAt(0).toUpperCase() }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <div class="font-semibold text-sm text-[#2C597D] truncate">{{ notif.room_name }}</div>
+                          <div class="text-sm text-gray-700 line-clamp-2">{{ notif.last_message }}</div>
+                          <div class="flex items-center gap-2 mt-1">
+                            <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-600 rounded-full">
+                              {{ notif.unread_count }}
+                            </span>
+                            <span class="text-xs text-gray-500">{{ formatNotifTime(notif.last_message_time) }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </router-link>
+                  </div>
+                  
+                  <div class="px-4 py-3 border-t bg-gray-50">
+                    <router-link to="/chat" @click="closeNotifications" class="text-sm text-[#00BCD4] hover:text-[#00ACC1] font-semibold">
+                      View all messages →
+                    </router-link>
+                  </div>
+                </div>
+              </transition>
+            </div>
 
             <router-link to="/profile" class="flex items-center space-x-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition group">
               <div v-if="!profile?.avatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] flex items-center justify-center text-white font-semibold">
@@ -232,6 +289,10 @@ export default {
       searchLoading: false,
       showSearchResults: false,
       searchTimeout: null,
+      // Notification dropdown
+      showNotifications: false,
+      notifications: [],
+      loadingNotifications: false,
     }
   },
   computed: {
@@ -390,6 +451,56 @@ export default {
       // Navigate to chat and trigger room selection via query param
       this.$router.push({ name: 'Chat', query: { room: this.toastRoomId } })
     },
+    async toggleNotifications() {
+      this.showNotifications = !this.showNotifications
+      if (this.showNotifications) {
+        await this.loadNotifications()
+        // Optional: Mark notifications as "seen" (not read, just seen in dropdown)
+        // This will clear the badge number when dropdown is opened
+        // Uncomment the line below if you want Facebook-like behavior
+        this.unreadCount = 0
+      }
+    },
+    async loadNotifications() {
+      try {
+        this.loadingNotifications = true
+        const { getChatRooms } = await import('../services/api')
+        const rooms = await getChatRooms()
+        // Filter rooms with unread messages
+        this.notifications = rooms.results
+          .filter(room => room.unread_count > 0)
+          .map(room => ({
+            room_id: room.id,
+            room_name: room.name || room.members.map(m => m.full_name || m.username).join(', '),
+            unread_count: room.unread_count,
+            last_message: room.last_message?.content || 'New message',
+            last_message_time: room.last_message?.created_at || room.updated_at
+          }))
+          .sort((a, b) => new Date(b.last_message_time) - new Date(a.last_message_time))
+      } catch (e) {
+        console.error('Failed to load notifications:', e)
+        this.notifications = []
+      } finally {
+        this.loadingNotifications = false
+      }
+    },
+    closeNotifications() {
+      this.showNotifications = false
+    },
+    formatNotifTime(timestamp) {
+      const date = new Date(timestamp)
+      const now = new Date()
+      const diff = now - date
+      const minutes = Math.floor(diff / (1000 * 60))
+      const hours = Math.floor(diff / (1000 * 60 * 60))
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      
+      if (minutes < 1) return 'Just now'
+      if (minutes < 60) return `${minutes}m ago`
+      if (hours < 24) return `${hours}h ago`
+      if (days < 7) return `${days}d ago`
+      return date.toLocaleDateString()
+    },
     confirmLogout() {
       this.showLogoutModal = true
     },
@@ -401,3 +512,37 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Dropdown animation */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.2s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* Fade animation for toast */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>
