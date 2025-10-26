@@ -117,6 +117,7 @@ if command -v ufw &> /dev/null; then
     sudo ufw allow 22/tcp    # SSH
     sudo ufw allow 80/tcp    # HTTP
     sudo ufw allow 443/tcp   # HTTPS
+    sudo ufw allow 8080/tcp  # Jenkins UI
     sudo ufw --force enable
     echo -e "${GREEN}✅ Firewall configured${NC}"
 fi
@@ -172,6 +173,24 @@ else
 fi
 
 # ============================================
+# Step 11b: Jenkins Setup Info
+# ============================================
+echo -e "${GREEN}🧩 Step 11b: Checking Jenkins readiness...${NC}"
+
+# Wait (up to ~2 minutes) for Jenkins to be fully up
+for i in $(seq 1 24); do
+    if docker logs medml_jenkins 2>&1 | grep -q "Jenkins is fully up and running"; then
+        echo -e "${GREEN}✅ Jenkins is up${NC}"
+        break
+    fi
+    echo -e "${YELLOW}... waiting for Jenkins (${i}/24)${NC}"
+    sleep 5
+done
+
+echo -e "${GREEN}🔑 Jenkins initial admin password:${NC}"
+docker exec medml_jenkins cat /var/jenkins_home/secrets/initialAdminPassword || echo -e "${YELLOW}⚠️  Unable to read password now. Try again: docker exec medml_jenkins cat /var/jenkins_home/secrets/initialAdminPassword${NC}"
+
+# ============================================
 # Step 12: Setup Auto-start
 # ============================================
 echo -e "${GREEN}⚙️  Step 12: Setting up auto-start on reboot...${NC}"
@@ -219,6 +238,7 @@ echo ""
 echo -e "   Frontend:  ${YELLOW}http://${PUBLIC_IP}${NC}"
 echo -e "   Backend:   ${YELLOW}http://${PUBLIC_IP}:8000/api/v1/${NC}"
 echo -e "   ML Docs:   ${YELLOW}http://${PUBLIC_IP}:5001/docs${NC}"
+echo -e "   Jenkins:   ${YELLOW}http://${PUBLIC_IP}:8080${NC}"
 echo ""
 
 echo -e "${GREEN}📊 Useful commands:${NC}"
@@ -227,6 +247,7 @@ echo -e "   View logs:         ${YELLOW}docker-compose logs -f${NC}"
 echo -e "   Restart services:  ${YELLOW}docker-compose restart${NC}"
 echo -e "   Stop services:     ${YELLOW}docker-compose down${NC}"
 echo -e "   Check status:      ${YELLOW}docker-compose ps${NC}"
+echo -e "   Jenkins password:  ${YELLOW}docker exec medml_jenkins cat /var/jenkins_home/secrets/initialAdminPassword${NC}"
 echo ""
 
 echo -e "${GREEN}🔐 Security reminders:${NC}"
