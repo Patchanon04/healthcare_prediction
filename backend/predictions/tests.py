@@ -97,7 +97,7 @@ class UploadImageTestCase(TestCase):
     def test_upload_image_success(self, mock_storage, mock_ml_service):
         """Test successful image upload."""
         # Mock storage save
-        mock_storage.return_value = 'dog_images/test.jpg'
+        mock_storage.return_value = 'patient_images/test.jpg'
         
         # Mock ML service response
         mock_ml_service.return_value = {

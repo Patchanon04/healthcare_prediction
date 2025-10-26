@@ -107,7 +107,7 @@ def upload_image(request):
     
     try:
         # Upload to S3 or local storage
-        file_name = f"dog_images/{int(time.time())}_{image_file.name}"
+        file_name = f"patient_images/{int(time.time())}_{image_file.name}"
         saved_path = default_storage.save(file_name, image_file)
         
         # Generate full URL
