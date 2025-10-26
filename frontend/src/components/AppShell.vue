@@ -85,8 +85,9 @@
             💬
           </div>
           <div class="flex-1">
-            <div class="text-sm text-gray-500">New message</div>
+            <div class="text-xs text-gray-500">New message from</div>
             <div class="font-semibold text-[#2C597D]">{{ toastSender }}</div>
+            <div v-if="toastRoomName" class="text-xs text-gray-500 mb-1">in {{ toastRoomName }}</div>
             <div class="text-sm text-gray-700 line-clamp-2">{{ toastContent }}</div>
           </div>
         </div>
@@ -141,6 +142,7 @@ export default {
       toastSender: '',
       toastContent: '',
       toastRoomId: null,
+      toastRoomName: '',
     }
   },
   computed: {
@@ -184,7 +186,7 @@ export default {
             const data = JSON.parse(event.data)
             if (data.type === 'notification') {
               // Only show toast for receiver (not sender)
-              this.showToastNotification(data.sender, data.content, data.room_id)
+              this.showToastNotification(data.sender, data.content, data.room_id, data.room_name)
               window.dispatchEvent(new CustomEvent('chat-notification', { detail: data }))
             }
           } catch (e) { /* ignore */ }
@@ -201,16 +203,22 @@ export default {
         // swallow to prevent white screen
       }
     },
-    showToastNotification(sender, content, roomId) {
+    showToastNotification(sender, content, roomId, roomName) {
       this.showToast = true
       this.toastSender = sender
       this.toastContent = content
       this.toastRoomId = roomId
+      this.toastRoomName = roomName || ''
       setTimeout(() => { this.showToast = false }, 5000)
     },
     openChatFromToast() {
-      if (!this.toastRoomId) return
-      this.$router.push({ name: 'Chat', params: { roomId: this.toastRoomId } })
+      this.showToast = false
+      if (!this.toastRoomId) {
+        this.$router.push({ name: 'Chat' })
+        return
+      }
+      // Navigate to chat and trigger room selection via query param
+      this.$router.push({ name: 'Chat', query: { room: this.toastRoomId } })
     },
     confirmLogout() {
       this.showLogoutModal = true

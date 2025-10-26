@@ -107,6 +107,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Send notifications to other members of the room
         member_ids = await self.get_room_member_ids()
+        room_name = await self.get_room_name()
         for uid in member_ids:
             if uid == self.user.id:
                 continue
@@ -115,6 +116,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'notify',
                     'room_id': str(self.room_id),
+                    'room_name': room_name,
                     'sender': self.user.username,
                     'content': content,
                     'created_at': message.created_at.isoformat(),
@@ -258,6 +260,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except ChatRoom.DoesNotExist:
             return []
 
+    @database_sync_to_async
+    def get_room_name(self):
+        try:
+            room = ChatRoom.objects.get(id=self.room_id)
+            if room.name:
+                return room.name
+            # Fallback: generate name from members
+            members = room.members.exclude(id=self.user.id)
+            names = [getattr(m, 'username', 'User') for m in members[:2]]
+            return ', '.join(names) if names else 'Chat'
+        except ChatRoom.DoesNotExist:
+            return 'Chat'
+
 
 class NotificationConsumer(AsyncWebsocketConsumer):
     """User-level notification channel. Group name: user_<user_id>."""
@@ -279,6 +294,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'notification',
             'room_id': event.get('room_id'),
+            'room_name': event.get('room_name'),
             'sender': event.get('sender'),
             'content': event.get('content'),
             'created_at': event.get('created_at'),

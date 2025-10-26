@@ -202,7 +202,8 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import AppShell from '../components/AppShell.vue'
 import Modal from '../components/Modal.vue'
 import { listChatRooms, listChatUsers, createChatRoom, listMessages, markMessagesRead, getProfile } from '../services/api'
@@ -211,6 +212,7 @@ export default {
   name: 'ChatView',
   components: { AppShell, Modal },
   setup() {
+    const route = useRoute()
     const rooms = ref([])
     const selectedRoom = ref(null)
     const messages = ref([])
@@ -491,6 +493,25 @@ export default {
       
       await fetchRooms()
       await fetchUsers()
+      
+      // Auto-select room from query param if present
+      if (route.query.room) {
+        const roomId = route.query.room
+        const room = rooms.value.find(r => String(r.id) === String(roomId))
+        if (room) {
+          selectRoom(room)
+        }
+      }
+    })
+
+    // Watch for query param changes (e.g., when clicking notification)
+    watch(() => route.query.room, (newRoomId) => {
+      if (newRoomId) {
+        const room = rooms.value.find(r => String(r.id) === String(newRoomId))
+        if (room) {
+          selectRoom(room)
+        }
+      }
     })
 
     onUnmounted(() => {
