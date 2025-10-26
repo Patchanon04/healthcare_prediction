@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('predictions', '0002_chatroom_message'),
+        ('predictions', '0003_chatroom_message'),
     ]
 
     operations = [
