@@ -295,11 +295,16 @@ export default {
     async performSearch() {
       try {
         this.searchLoading = true
+        console.log('🔍 Searching for:', this.searchQuery)
         const { globalSearch } = await import('../services/api')
-        this.searchResults = await globalSearch(this.searchQuery)
+        const results = await globalSearch(this.searchQuery)
+        console.log('✅ Search results:', results)
+        this.searchResults = results
         this.showSearchResults = true
       } catch (e) {
-        console.error('Search failed:', e)
+        console.error('❌ Search failed:', e)
+        console.error('Error details:', e.response?.data || e.message)
+        this.searchResults = { patients: [], diagnoses: [], messages: [], total: 0 }
       } finally {
         this.searchLoading = false
       }

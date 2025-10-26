@@ -26,6 +26,9 @@
         <div class="bg-white rounded-xl shadow p-5">
           <div class="text-sm text-gray-500">Total Patients</div>
           <div class="text-3xl font-bold text-[#2C597D] mt-1">{{ reportData?.summary?.total_patients ?? '-' }}</div>
+          <div v-if="reportData?.summary?.patients_with_predictions !== undefined" class="text-xs text-gray-400 mt-1">
+            {{ reportData.summary.patients_with_predictions }} with diagnoses
+          </div>
         </div>
         <div class="bg-white rounded-xl shadow p-5">
           <div class="text-sm text-gray-500">Total Predictions</div>

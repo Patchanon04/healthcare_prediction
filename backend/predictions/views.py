@@ -541,8 +541,11 @@ def reports_summary(request):
     total_predictions = transactions_qs.count()
     avg_confidence = transactions_qs.aggregate(avg=Avg('confidence'))['avg'] or 0
     
-    # Count unique patients in this range
-    total_patients = transactions_qs.values('patient').distinct().count()
+    # Count ALL patients in the system (not just those with transactions in this range)
+    total_patients = Patient.objects.count()
+    
+    # Count unique patients WITH transactions in this range (for reference)
+    patients_with_predictions = transactions_qs.values('patient').distinct().count()
     
     # Daily series
     daily_qs = (
@@ -586,6 +589,7 @@ def reports_summary(request):
         },
         'summary': {
             'total_patients': total_patients,
+            'patients_with_predictions': patients_with_predictions,
             'total_predictions': total_predictions,
             'avg_confidence': round(avg_confidence, 2),
         },
@@ -709,6 +713,8 @@ def get_unread_count(request):
 def global_search(request):
     """Global search across patients, diagnoses, and chat messages."""
     query = request.GET.get('q', '').strip()
+    logger.info(f"Global search query: '{query}' by user {request.user.username}")
+    
     if not query or len(query) < 2:
         return Response({
             'patients': [],
@@ -717,53 +723,67 @@ def global_search(request):
             'total': 0
         })
     
-    # Search patients
-    patients = Patient.objects.filter(
-        models.Q(full_name__icontains=query) |
-        models.Q(mrn__icontains=query) |
-        models.Q(phone__icontains=query)
-    )[:10]
-    
-    # Search diagnoses (transactions)
-    diagnoses = Transaction.objects.filter(
-        models.Q(diagnosis__icontains=query) |
-        models.Q(patient__full_name__icontains=query) |
-        models.Q(patient__mrn__icontains=query)
-    ).select_related('patient').order_by('-uploaded_at')[:10]
-    
-    # Search chat messages (only in rooms user is member of)
-    messages = Message.objects.filter(
-        room__members=request.user,
-        content__icontains=query
-    ).select_related('sender', 'room').order_by('-created_at')[:10]
-    
-    # Serialize results
-    from .serializers import PatientSerializer, TransactionSerializer
-    
-    patient_results = PatientSerializer(patients, many=True).data
-    diagnosis_results = TransactionSerializer(diagnoses, many=True).data
-    
-    message_results = []
-    for msg in messages:
-        message_results.append({
-            'id': str(msg.id),
-            'content': msg.content,
-            'sender': {
-                'id': msg.sender.id,
-                'username': msg.sender.username,
-                'full_name': getattr(msg.sender.profile, 'full_name', '') if hasattr(msg.sender, 'profile') else ''
-            },
-            'room_id': str(msg.room.id),
-            'room_name': msg.room.name or 'Chat',
-            'created_at': msg.created_at.isoformat()
+    try:
+        # Search patients
+        patients = Patient.objects.filter(
+            Q(full_name__icontains=query) |
+            Q(mrn__icontains=query) |
+            Q(phone__icontains=query)
+        )[:10]
+        logger.info(f"Found {patients.count()} patients")
+        
+        # Search diagnoses (transactions)
+        diagnoses = Transaction.objects.filter(
+            Q(diagnosis__icontains=query) |
+            Q(patient__full_name__icontains=query) |
+            Q(patient__mrn__icontains=query)
+        ).select_related('patient').order_by('-uploaded_at')[:10]
+        logger.info(f"Found {diagnoses.count()} diagnoses")
+        
+        # Search chat messages (only in rooms user is member of)
+        messages = Message.objects.filter(
+            room__members=request.user,
+            content__icontains=query
+        ).select_related('sender', 'room').order_by('-created_at')[:10]
+        logger.info(f"Found {messages.count()} messages")
+        
+        # Serialize results
+        from .serializers import PatientSerializer, TransactionSerializer
+        
+        patient_results = PatientSerializer(patients, many=True).data
+        diagnosis_results = TransactionSerializer(diagnoses, many=True).data
+        
+        message_results = []
+        for msg in messages:
+            message_results.append({
+                'id': str(msg.id),
+                'content': msg.content,
+                'sender': {
+                    'id': msg.sender.id,
+                    'username': msg.sender.username,
+                    'full_name': getattr(msg.sender.profile, 'full_name', '') if hasattr(msg.sender, 'profile') else ''
+                },
+                'room_id': str(msg.room.id),
+                'room_name': msg.room.name or 'Chat',
+                'created_at': msg.created_at.isoformat()
+            })
+        
+        total = len(patient_results) + len(diagnosis_results) + len(message_results)
+        logger.info(f"Total results: {total}")
+        
+        return Response({
+            'patients': patient_results,
+            'diagnoses': diagnosis_results,
+            'messages': message_results,
+            'total': total,
+            'query': query
         })
-    
-    total = len(patient_results) + len(diagnosis_results) + len(message_results)
-    
-    return Response({
-        'patients': patient_results,
-        'diagnoses': diagnosis_results,
-        'messages': message_results,
-        'total': total,
-        'query': query
-    })
+    except Exception as e:
+        logger.error(f"Global search error: {str(e)}", exc_info=True)
+        return Response({
+            'patients': [],
+            'diagnoses': [],
+            'messages': [],
+            'total': 0,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
