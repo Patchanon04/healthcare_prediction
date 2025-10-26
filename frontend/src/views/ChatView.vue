@@ -280,19 +280,24 @@ export default {
       }
 
       const token = localStorage.getItem('token')
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsUrl = `${protocol}//${window.location.host}/ws/chat/${roomId}/?token=${token}`
+      // Use backend URL for WebSocket (not frontend URL)
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const backendHost = import.meta.env.VITE_API_URL?.replace('http://', '').replace('https://', '') || 'localhost:8000'
+      const wsUrl = `${wsProtocol}//${backendHost}/ws/chat/${roomId}/?token=${token}`
       
+      console.log('Connecting to WebSocket:', wsUrl)
       ws.value = new WebSocket(wsUrl)
       
       ws.value.onopen = () => {
-        console.log('WebSocket connected')
+        console.log('✅ WebSocket connected successfully')
       }
       
       ws.value.onmessage = (event) => {
+        console.log('📨 Received WebSocket message:', event.data)
         const data = JSON.parse(event.data)
         
         if (data.type === 'message') {
+          console.log('💬 New message:', data.message)
           messages.value.push(data.message)
           nextTick(() => scrollToBottom())
         } else if (data.type === 'typing') {
@@ -305,25 +310,50 @@ export default {
           } else {
             typingUser.value = null
           }
+        } else if (data.type === 'error') {
+          console.error('❌ WebSocket error:', data.message)
+          showError(data.message)
         }
       }
       
       ws.value.onerror = (error) => {
-        console.error('WebSocket error:', error)
+        console.error('❌ WebSocket error:', error)
+        showError('WebSocket connection error')
       }
       
-      ws.value.onclose = () => {
-        console.log('WebSocket disconnected')
+      ws.value.onclose = (event) => {
+        console.log('🔌 WebSocket disconnected:', event.code, event.reason)
+        if (event.code !== 1000) {
+          showError('Connection lost. Please refresh the page.')
+        }
       }
     }
 
     const sendMessageHandler = () => {
-      if (!newMessage.value.trim() || !ws.value) return
+      if (!newMessage.value.trim()) {
+        console.warn('⚠️ Cannot send empty message')
+        return
+      }
       
-      ws.value.send(JSON.stringify({
+      if (!ws.value) {
+        console.error('❌ WebSocket not connected')
+        showError('Not connected to chat server')
+        return
+      }
+      
+      if (ws.value.readyState !== WebSocket.OPEN) {
+        console.error('❌ WebSocket not ready:', ws.value.readyState)
+        showError('Connection not ready. Please wait...')
+        return
+      }
+      
+      const messageData = {
         type: 'message',
         content: newMessage.value.trim()
-      }))
+      }
+      
+      console.log('📤 Sending message:', messageData)
+      ws.value.send(JSON.stringify(messageData))
       
       newMessage.value = ''
     }

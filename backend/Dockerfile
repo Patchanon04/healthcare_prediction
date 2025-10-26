@@ -31,7 +31,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/api/v1/health/')"
 
-# Run migrations and start server
+# Run migrations and start server with Daphne (ASGI server for WebSocket support)
 CMD python manage.py migrate --noinput && \
     python manage.py collectstatic --noinput && \
-    gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 60
+    daphne -b 0.0.0.0 -p 8000 config.asgi:application
