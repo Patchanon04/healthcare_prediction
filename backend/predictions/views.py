@@ -542,8 +542,9 @@ def reports_summary(request):
     if start_date > end_date:
         return Response({'error': 'start date must be before end date'}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Filter transactions by date range
+    # Filter transactions by date range AND current user
     transactions_qs = Transaction.objects.filter(
+        user=request.user,
         uploaded_at__date__gte=start_date,
         uploaded_at__date__lte=end_date
     )
@@ -552,8 +553,8 @@ def reports_summary(request):
     total_predictions = transactions_qs.count()
     avg_confidence = transactions_qs.aggregate(avg=Avg('confidence'))['avg'] or 0
     
-    # Count ALL patients in the system (not just those with transactions in this range)
-    total_patients = Patient.objects.count()
+    # Count patients created by current user
+    total_patients = Patient.objects.filter(created_by=request.user).count()
     
     # Count unique patients WITH transactions in this range (for reference)
     patients_with_predictions = transactions_qs.values('patient').distinct().count()
