@@ -150,25 +150,25 @@
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-          <input v-model="treatmentForm.title" type="text" class="w-full border rounded-lg px-3 py-2" />
+          <input v-model="treatmentForm.title" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition" />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-          <textarea v-model="treatmentForm.description" rows="3" class="w-full border rounded-lg px-3 py-2"></textarea>
+          <textarea v-model="treatmentForm.description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition resize-none"></textarea>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
-            <input v-model="treatmentForm.start_date" type="date" class="w-full border rounded-lg px-3 py-2" />
+            <input v-model="treatmentForm.start_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-            <input v-model="treatmentForm.end_date" type="date" class="w-full border rounded-lg px-3 py-2" />
+            <input v-model="treatmentForm.end_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition" />
           </div>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-          <select v-model="treatmentForm.status" class="w-full border rounded-lg px-3 py-2">
+          <select v-model="treatmentForm.status" class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition cursor-pointer">
             <option value="active">Active</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
@@ -186,35 +186,35 @@
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Drug Name *</label>
-          <input v-model="medicationForm.drug_name" type="text" class="w-full border rounded-lg px-3 py-2" />
+          <input v-model="medicationForm.drug_name" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition" />
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Dosage *</label>
-            <input v-model="medicationForm.dosage" type="text" placeholder="e.g., 500mg" class="w-full border rounded-lg px-3 py-2" />
+            <input v-model="medicationForm.dosage" type="text" placeholder="e.g., 500mg" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Frequency *</label>
-            <input v-model="medicationForm.frequency" type="text" placeholder="e.g., twice daily" class="w-full border rounded-lg px-3 py-2" />
+            <input v-model="medicationForm.frequency" type="text" placeholder="e.g., twice daily" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition" />
           </div>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Instructions</label>
-          <textarea v-model="medicationForm.instructions" rows="2" class="w-full border rounded-lg px-3 py-2"></textarea>
+          <textarea v-model="medicationForm.instructions" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition resize-none"></textarea>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
-            <input v-model="medicationForm.start_date" type="date" class="w-full border rounded-lg px-3 py-2" />
+            <input v-model="medicationForm.start_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-            <input v-model="medicationForm.end_date" type="date" class="w-full border rounded-lg px-3 py-2" />
+            <input v-model="medicationForm.end_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition" />
           </div>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-          <select v-model="medicationForm.status" class="w-full border rounded-lg px-3 py-2">
+          <select v-model="medicationForm.status" class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition cursor-pointer">
             <option value="active">Active</option>
             <option value="completed">Completed</option>
             <option value="discontinued">Discontinued</option>
@@ -232,11 +232,11 @@
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-          <input v-model="followUpForm.title" type="text" class="w-full border rounded-lg px-3 py-2" />
+          <input v-model="followUpForm.title" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition" />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Note Type</label>
-          <select v-model="followUpForm.note_type" class="w-full border rounded-lg px-3 py-2">
+          <select v-model="followUpForm.note_type" class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition cursor-pointer">
             <option value="checkup">Check-up</option>
             <option value="progress">Progress Update</option>
             <option value="complication">Complication</option>
@@ -245,7 +245,7 @@
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Note *</label>
-          <textarea v-model="followUpForm.note" rows="4" class="w-full border rounded-lg px-3 py-2"></textarea>
+          <textarea v-model="followUpForm.note" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#00BCD4] focus:border-transparent transition resize-none"></textarea>
         </div>
       </div>
       <template #footer>
