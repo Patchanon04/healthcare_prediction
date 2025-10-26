@@ -61,10 +61,10 @@ else
 fi
 
 # ============================================
-# Step 4: Install Utilities
+# Step 4: Install Utilities & Nginx
 # ============================================
-echo -e "${GREEN}🛠️  Step 4: Installing utilities...${NC}"
-sudo apt install -y htop vim curl wget git
+echo -e "${GREEN}🛠️  Step 4: Installing utilities and Nginx...${NC}"
+sudo apt install -y htop vim curl wget git nginx
 
 # ============================================
 # Step 5: Check .env file
@@ -189,6 +189,29 @@ done
 
 echo -e "${GREEN}🔑 Jenkins initial admin password:${NC}"
 docker exec medml_jenkins cat /var/jenkins_home/secrets/initialAdminPassword || echo -e "${YELLOW}⚠️  Unable to read password now. Try again: docker exec medml_jenkins cat /var/jenkins_home/secrets/initialAdminPassword${NC}"
+
+# ============================================
+# Step 11c: Setup Nginx Reverse Proxy
+# ============================================
+echo -e "${GREEN}🌐 Step 11c: Configuring Nginx reverse proxy...${NC}"
+
+# Copy nginx config to sites-available
+sudo cp nginx.conf /etc/nginx/sites-available/medml.conf
+
+# Remove default site and enable medml
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/medml.conf /etc/nginx/sites-enabled/medml.conf
+
+# Test nginx config
+if sudo nginx -t; then
+    echo -e "${GREEN}✅ Nginx config valid${NC}"
+    sudo systemctl enable nginx
+    sudo systemctl restart nginx
+    echo -e "${GREEN}✅ Nginx reverse proxy configured and running${NC}"
+else
+    echo -e "${RED}❌ Nginx config has errors${NC}"
+    exit 1
+fi
 
 # ============================================
 # Step 12: Setup Auto-start

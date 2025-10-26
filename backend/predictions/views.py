@@ -114,8 +114,9 @@ def upload_image(request):
         if settings.USE_S3:
             image_url = f"{settings.MEDIA_URL}{saved_path}"
         else:
-            # For local storage, use a mock URL
-            image_url = f"http://backend:8000{settings.MEDIA_URL}{saved_path}"
+            # For local storage, use a publicly accessible URL
+            # ML service needs to access this via HTTP
+            image_url = f"http://medml_backend:8000{settings.MEDIA_URL}{saved_path}"
         
         logger.info(f"Image uploaded to: {image_url}")
         
