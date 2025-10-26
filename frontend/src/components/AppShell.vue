@@ -87,8 +87,7 @@
           <div class="flex-1">
             <div class="text-xs text-gray-500">New message from</div>
             <div class="font-semibold text-[#2C597D]">{{ toastSender }}</div>
-            <div v-if="toastRoomName" class="text-xs text-gray-500 mb-1">in {{ toastRoomName }}</div>
-            <div class="text-sm text-gray-700 line-clamp-2">{{ toastContent }}</div>
+            <div class="text-sm text-gray-700 line-clamp-2 mt-1">{{ toastContent }}</div>
           </div>
         </div>
       </div>
