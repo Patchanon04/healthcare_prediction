@@ -205,7 +205,7 @@
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import AppShell from '../components/AppShell.vue'
 import Modal from '../components/Modal.vue'
-import { listChatRooms, listChatUsers, createChatRoom, listMessages, markMessagesRead } from '../services/api'
+import { listChatRooms, listChatUsers, createChatRoom, listMessages, markMessagesRead, getProfile } from '../services/api'
 
 export default {
   name: 'ChatView',
@@ -462,10 +462,32 @@ export default {
     }
 
     onMounted(async () => {
-      // Get current user ID
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      currentUserId.value = user.id
-      currentUsername.value = user.username || null
+      try {
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+          const user = JSON.parse(userStr)
+          currentUserId.value = user.id
+          currentUsername.value = user.username || null
+        } else {
+          // Fallback: fetch from API
+          const token = localStorage.getItem('token')
+          if (token) {
+            try {
+              const profile = await getProfile()
+              currentUserId.value = profile.id || profile.user?.id
+              currentUsername.value = profile.username || profile.user?.username
+              // Cache for future
+              localStorage.setItem('user', JSON.stringify({ id: currentUserId.value, username: currentUsername.value }))
+            } catch (e) {
+              console.error('Failed to fetch user profile:', e)
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse user from localStorage:', e)
+      }
+      
+      console.log('🔑 Current User ID:', currentUserId.value, 'Username:', currentUsername.value)
       
       await fetchRooms()
       await fetchUsers()
@@ -486,6 +508,10 @@ export default {
       }
       if (suser && currentUsername.value) {
         if (suser === currentUsername.value) return true
+      }
+      // Debug log for first message
+      if (messages.value.length > 0 && msg === messages.value[0]) {
+        console.log('🔍 isSelf check:', { msgSenderId: sid, msgSenderUsername: suser, currentUserId: currentUserId.value, currentUsername: currentUsername.value })
       }
       return false
     }

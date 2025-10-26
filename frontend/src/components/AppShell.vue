@@ -183,7 +183,8 @@ export default {
           try {
             const data = JSON.parse(event.data)
             if (data.type === 'notification') {
-              this.showToast(data.sender, data.content, data.room_id)
+              // Only show toast for receiver (not sender)
+              this.showToastNotification(data.sender, data.content, data.room_id)
               window.dispatchEvent(new CustomEvent('chat-notification', { detail: data }))
             }
           } catch (e) { /* ignore */ }
@@ -200,12 +201,12 @@ export default {
         // swallow to prevent white screen
       }
     },
-    showToast(sender, content, roomId) {
+    showToastNotification(sender, content, roomId) {
       this.showToast = true
       this.toastSender = sender
       this.toastContent = content
       this.toastRoomId = roomId
-      setTimeout(() => this.showToast = false, 5000)
+      setTimeout(() => { this.showToast = false }, 5000)
     },
     openChatFromToast() {
       if (!this.toastRoomId) return

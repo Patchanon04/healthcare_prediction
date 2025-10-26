@@ -92,6 +92,10 @@ export default {
       try {
         const data = await login({ username: username.value, password: password.value })
         localStorage.setItem('token', data.token)
+        // Store user info for chat alignment
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify({ id: data.user.id, username: data.user.username }))
+        }
         toast.success('Welcome!')
         // Go to intended path if provided, else default to patients
         if (redirectTo) {
