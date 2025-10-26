@@ -144,7 +144,9 @@ export default {
     }
   },
   computed: {
-    profile: userStore.profile,
+    profile() {
+      return userStore.profile
+    },
   },
   mounted() {
     this.loadProfile()
@@ -159,21 +161,43 @@ export default {
       })
     },
     connectNotifyWebSocket() {
-      const token = localStorage.getItem('token')
-      if (!token) return
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
 
-      const wsUrl = `${process.env.VITE_API_URL || 'http://localhost:3000'}/ws/notify?token=${token}`
-      this.notifWs = new WebSocket(wsUrl)
+        // Build WS URL properly (ws/wss) and backend host from Vite env or current hostname
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+        let host = 'localhost:8000'
+        try {
+          if (import.meta && import.meta.env && import.meta.env.VITE_API_URL) {
+            host = import.meta.env.VITE_API_URL.replace('http://', '').replace('https://', '')
+          } else if (window.location.hostname !== 'localhost') {
+            host = `${window.location.hostname}:8000`
+          }
+        } catch (e) {}
 
-      this.notifWs.onmessage = event => {
-        const data = JSON.parse(event.data)
-        if (data.type === 'new_message') {
-          this.showToast(data.sender, data.content, data.room_id)
+        const wsUrl = `${proto}//${host}/ws/notify/?token=${encodeURIComponent(token)}`
+        this.notifWs = new WebSocket(wsUrl)
+
+        this.notifWs.onmessage = event => {
+          try {
+            const data = JSON.parse(event.data)
+            if (data.type === 'notification') {
+              this.showToast(data.sender, data.content, data.room_id)
+              window.dispatchEvent(new CustomEvent('chat-notification', { detail: data }))
+            }
+          } catch (e) { /* ignore */ }
         }
-      }
 
-      this.notifWs.onclose = () => {
-        setTimeout(() => this.connectNotifyWebSocket(), 5000)
+        this.notifWs.onclose = () => {
+          // retry later
+          setTimeout(() => this.connectNotifyWebSocket(), 5000)
+        }
+        this.notifWs.onerror = () => {
+          // avoid crashing the app
+        }
+      } catch (e) {
+        // swallow to prevent white screen
       }
     },
     showToast(sender, content, roomId) {
