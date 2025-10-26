@@ -375,7 +375,8 @@ export default {
         loadTimeline()
       } catch (e) {
         console.error('Failed to save treatment:', e)
-        alert('Failed to save treatment plan')
+        console.error('Error response:', e.response?.data)
+        alert('Failed to save treatment plan: ' + (e.response?.data?.detail || e.response?.data?.title || e.message || 'Unknown error'))
       }
     }
 
@@ -414,7 +415,8 @@ export default {
         loadTimeline()
       } catch (e) {
         console.error('Failed to save medication:', e)
-        alert('Failed to save medication')
+        console.error('Error response:', e.response?.data)
+        alert('Failed to save medication: ' + (e.response?.data?.detail || JSON.stringify(e.response?.data) || e.message || 'Unknown error'))
       }
     }
 
@@ -453,7 +455,8 @@ export default {
         loadTimeline()
       } catch (e) {
         console.error('Failed to save follow-up:', e)
-        alert('Failed to save follow-up note')
+        console.error('Error response:', e.response?.data)
+        alert('Failed to save follow-up note: ' + (e.response?.data?.detail || JSON.stringify(e.response?.data) || e.message || 'Unknown error'))
       }
     }
 
