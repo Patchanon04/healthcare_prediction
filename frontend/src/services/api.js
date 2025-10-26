@@ -137,6 +137,11 @@ export const getDiagnosisDistribution = async () => {
   return res.data
 }
 
+export const getReportSummary = async ({ start, end } = {}) => {
+  const res = await api.get('/api/v1/reports/summary/', { params: { start, end } })
+  return res.data
+}
+
 /**
  * Check backend health status
  * @returns {Promise} - Promise with health status

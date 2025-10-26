@@ -50,21 +50,34 @@
         </div>
       </div>
     </div>
+
+    <!-- Error Modal -->
+    <Modal :show="showErrorModal" title="Error" @close="showErrorModal = false">
+      <p class="text-gray-700">{{ errorMessage }}</p>
+      <template #footer>
+        <button @click="showErrorModal = false" class="px-4 py-2 bg-[#00BCD4] text-white rounded-lg hover:bg-[#00ACC1] transition">
+          OK
+        </button>
+      </template>
+    </Modal>
   </AppShell>
 </template>
 
 <script>
 import { ref, onMounted, computed } from 'vue'
 import AppShell from '../components/AppShell.vue'
-import axios from 'axios'
+import Modal from '../components/Modal.vue'
+import { getReportSummary } from '../services/api'
 
 export default {
   name: 'Dashboard',
-  components: { AppShell },
+  components: { AppShell, Modal },
   setup() {
     const reportData = ref(null)
     const startDate = ref('')
     const endDate = ref('')
+    const showErrorModal = ref(false)
+    const errorMessage = ref('')
 
     const dailyCanvas = ref(null)
     const distCanvas = ref(null)
@@ -85,6 +98,11 @@ export default {
       start.setDate(end.getDate() - 13)
       endDate.value = end.toISOString().split('T')[0]
       startDate.value = start.toISOString().split('T')[0]
+    }
+
+    const showError = (msg) => {
+      errorMessage.value = msg
+      showErrorModal.value = true
     }
 
     const loadChartJs = () => new Promise((resolve, reject) => {
@@ -113,16 +131,12 @@ export default {
 
     const fetchReportData = async () => {
       try {
-        const token = localStorage.getItem('token')
-        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/reports/summary/`, {
-          params: { start: startDate.value, end: endDate.value },
-          headers: { Authorization: `Token ${token}` }
-        })
-        reportData.value = res.data
+        const data = await getReportSummary({ start: startDate.value, end: endDate.value })
+        reportData.value = data
         renderCharts()
       } catch (err) {
         console.error('Failed to fetch report:', err)
-        alert('Failed to load report data')
+        showError('Failed to load report data. Please try again.')
       }
     }
 
@@ -246,7 +260,18 @@ export default {
       await fetchReportData()
     })
 
-    return { reportData, startDate, endDate, avgConfidence, dailyCanvas, distCanvas, applyDateRange, exportPDF }
+    return { 
+      reportData, 
+      startDate, 
+      endDate, 
+      avgConfidence, 
+      dailyCanvas, 
+      distCanvas, 
+      applyDateRange, 
+      exportPDF,
+      showErrorModal,
+      errorMessage
+    }
   }
 }
 </script>
