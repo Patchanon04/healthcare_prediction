@@ -293,6 +293,7 @@ export default {
       showNotifications: false,
       notifications: [],
       loadingNotifications: false,
+      notificationsSeen: false, // Track if user has seen notifications
     }
   },
   computed: {
@@ -332,7 +333,15 @@ export default {
       try {
         const { getUnreadCount } = await import('../services/api')
         const data = await getUnreadCount()
-        this.unreadCount = data.unread_count || 0
+        const newCount = data.unread_count || 0
+        
+        // Only update if notifications haven't been seen, or if count increased
+        if (!this.notificationsSeen || newCount > this.unreadCount) {
+          this.unreadCount = newCount
+          if (newCount > this.unreadCount) {
+            this.notificationsSeen = false // New messages arrived
+          }
+        }
       } catch (e) {
         // Silently fail
       }
@@ -341,6 +350,8 @@ export default {
       // Decrement unread count when messages are marked as read
       const count = event.detail?.count || 0
       this.unreadCount = Math.max(0, this.unreadCount - count)
+      // Reset seen flag so badge can show again if needed
+      this.notificationsSeen = false
     },
     handleSearchInput() {
       clearTimeout(this.searchTimeout)
@@ -455,30 +466,54 @@ export default {
       this.showNotifications = !this.showNotifications
       if (this.showNotifications) {
         await this.loadNotifications()
-        // Optional: Mark notifications as "seen" (not read, just seen in dropdown)
-        // This will clear the badge number when dropdown is opened
-        // Uncomment the line below if you want Facebook-like behavior
+        // Mark as seen - badge will stay hidden until new messages arrive
+        this.notificationsSeen = true
         this.unreadCount = 0
       }
     },
     async loadNotifications() {
       try {
         this.loadingNotifications = true
-        const { getChatRooms } = await import('../services/api')
-        const rooms = await getChatRooms()
+        const { listChatRooms } = await import('../services/api')
+        const data = await listChatRooms({ pageSize: 50 })
+        console.log('📬 Chat rooms data:', data)
+        
+        // Handle paginated response
+        const rooms = data.results || []
+        console.log('📬 Rooms array:', rooms)
+        
         // Filter rooms with unread messages
-        this.notifications = rooms.results
-          .filter(room => room.unread_count > 0)
-          .map(room => ({
-            room_id: room.id,
-            room_name: room.name || room.members.map(m => m.full_name || m.username).join(', '),
-            unread_count: room.unread_count,
-            last_message: room.last_message?.content || 'New message',
-            last_message_time: room.last_message?.created_at || room.updated_at
-          }))
+        this.notifications = rooms
+          .filter(room => {
+            const hasUnread = room.unread_count && room.unread_count > 0
+            console.log(`📬 Room ${room.id}: unread=${room.unread_count}, hasUnread=${hasUnread}`)
+            return hasUnread
+          })
+          .map(room => {
+            // Get room name from members
+            let roomName = 'Chat'
+            if (room.name) {
+              roomName = room.name
+            } else if (room.members && Array.isArray(room.members)) {
+              roomName = room.members
+                .map(m => m.full_name || m.username || 'User')
+                .join(', ')
+            }
+            
+            return {
+              room_id: room.id,
+              room_name: roomName,
+              unread_count: room.unread_count,
+              last_message: room.last_message?.content || 'New message',
+              last_message_time: room.last_message?.created_at || room.updated_at || new Date().toISOString()
+            }
+          })
           .sort((a, b) => new Date(b.last_message_time) - new Date(a.last_message_time))
+        
+        console.log('📬 Filtered notifications:', this.notifications)
       } catch (e) {
-        console.error('Failed to load notifications:', e)
+        console.error('❌ Failed to load notifications:', e)
+        console.error('❌ Error details:', e.response?.data)
         this.notifications = []
       } finally {
         this.loadingNotifications = false
