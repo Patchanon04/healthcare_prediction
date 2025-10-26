@@ -53,6 +53,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   response => response,
   error => {
+    const status = error.response?.status
+    if (status === 401) {
+      try { localStorage.removeItem('token') } catch (e) {}
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search)
+      if (window.location.pathname !== '/login') {
+        window.location.href = `/login?redirect=${redirect}`
+      }
+    }
     const errorMessage = error.response?.data?.error || error.message || 'An error occurred'
     return Promise.reject(new Error(errorMessage))
   }

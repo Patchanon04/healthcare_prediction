@@ -8,7 +8,7 @@ import ProfileView from '../views/ProfileView.vue'
 import ChatView from '../views/ChatView.vue'
 
 const routes = [
-  { path: '/', redirect: '/patients' },
+  { path: '/', redirect: '/login' },
   { path: '/dashboard', name: 'Dashboard', component: Dashboard, meta: { title: 'Dashboard' } },
   { path: '/login', name: 'Login', component: LoginView, meta: { public: true } },
   { path: '/register', name: 'Register', component: RegisterView, meta: { public: true } },
@@ -25,10 +25,22 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
-  if (!to.meta.public && !token) {
-    return next({ name: 'Login' })
+
+  // If route is public, allow (e.g., login/register)
+  if (to.meta && to.meta.public) {
+    // If already logged in, prevent visiting login/register
+    if (token && (to.name === 'Login' || to.name === 'Register')) {
+      return next({ name: 'Patients' })
+    }
+    return next()
   }
-  next()
+
+  // Protected routes: require token
+  if (!token) {
+    return next({ name: 'Login', query: { redirect: to.fullPath } })
+  }
+
+  return next()
 })
 
 export default router

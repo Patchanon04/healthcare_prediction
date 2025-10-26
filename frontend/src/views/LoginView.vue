@@ -77,11 +77,14 @@ import Brain from '../assets/brain.png'
 
 export default {
   name: 'LoginView',
-  setup() {
+  setup(_, { attrs }) {
     const toast = useToast()
     const username = ref('')
     const password = ref('')
     const loading = ref(false)
+    // read redirect from URL
+    const params = new URLSearchParams(window.location.search)
+    const redirectTo = params.get('redirect')
 
     const handleLogin = async () => {
       if (!username.value || !password.value) return
@@ -90,7 +93,12 @@ export default {
         const data = await login({ username: username.value, password: password.value })
         localStorage.setItem('token', data.token)
         toast.success('Welcome!')
-        window.location.href = '/patients'
+        // Go to intended path if provided, else default to patients
+        if (redirectTo) {
+          window.location.href = redirectTo
+        } else {
+          window.location.href = '/patients'
+        }
       } catch (e) {
         toast.error(e.message)
       } finally {
