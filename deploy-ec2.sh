@@ -228,8 +228,8 @@ After=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=$(pwd)
-ExecStart=/bin/bash -c '/usr/local/bin/docker-compose -f /home/ubuntu/MLOPs/docker-compose.prod.yml up -d && sleep 30 && /usr/local/bin/docker-compose -f /home/ubuntu/MLOPs/docker-compose.prod.yml exec -T backend python manage.py makemigrations && /usr/local/bin/docker-compose -f /home/ubuntu/MLOPs/docker-compose.prod.yml exec -T backend python manage.py migrate'
-ExecStop=/usr/local/bin/docker-compose -f /home/ubuntu/MLOPs/docker-compose.prod.yml down
+ExecStart=/bin/bash -c '/usr/local/bin/docker-compose -f /home/ubuntu/healthcare_prediction/docker-compose.prod.yml up -d && sleep 30 && /usr/local/bin/docker-compose -f /home/ubuntu/healthcare_prediction/docker-compose.prod.yml exec -T backend python manage.py makemigrations && /usr/local/bin/docker-compose -f /home/ubuntu/healthcare_prediction/docker-compose.prod.yml exec -T backend python manage.py migrate'
+ExecStop=/usr/local/bin/docker-compose -f /home/ubuntu/healthcare_prediction/docker-compose.prod.yml down
 User=$USER
 
 [Install]

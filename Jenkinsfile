@@ -11,7 +11,7 @@ pipeline {
     // ใช้ชื่อโปรเจกต์คงที่เพื่อให้ down/up กระทบ stack เดียวกันเสมอ
     COMPOSE_PROJECT_NAME = 'medml'
     // ชี้ไปยังไฟล์ .env ของ production บน EC2 (ปรับได้ตามที่วางไฟล์จริง)
-    ENV_FILE = '/home/ubuntu/MLOPs/.env'
+    ENV_FILE = '/home/ubuntu/healthcare_prediction/.env'
   }
   stages {
     stage('Checkout') {
