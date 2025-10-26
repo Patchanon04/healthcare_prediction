@@ -53,6 +53,29 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Redis (for Django Channels)
+  redis:
+    image: redis:7-alpine
+    container_name: medml_redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medml_network
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # Backend (Django REST Framework)
   backend:
     build:
@@ -80,12 +103,16 @@ services:
       - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME:-us-east-1}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost,http://localhost:80}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./backend/media:/app/media
     depends_on:
       db:
         condition: service_healthy
       ml_service:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/api/v1/health/')"]
@@ -155,6 +182,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
     driver: local
   jenkins_home:
     driver: local
