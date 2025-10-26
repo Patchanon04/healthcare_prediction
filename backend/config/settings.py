@@ -18,6 +18,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 # Application definition
 INSTALLED_APPS = [
+    'daphne',  # Must be first for ASGI
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -30,6 +31,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'storages',
+    'channels',
     
     # Local apps
     'predictions',
@@ -65,6 +67,17 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+# Channels
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [(os.getenv('REDIS_HOST', 'redis'), int(os.getenv('REDIS_PORT', '6379')))],
+        },
+    },
+}
 
 # Database
 DATABASES = {

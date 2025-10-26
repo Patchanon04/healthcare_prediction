@@ -27,4 +27,10 @@ urlpatterns = [
     path('metrics/diagnosis-distribution/', views.metrics_diagnosis_distribution, name='metrics-diagnosis'),
     # reports
     path('reports/summary/', views.reports_summary, name='reports-summary'),
+    # chat
+    path('chat/users/', views.list_users, name='chat-users'),
+    path('chat/rooms/', views.ChatRoomListCreateView.as_view(), name='chat-rooms'),
+    path('chat/rooms/<uuid:pk>/', views.ChatRoomDetailView.as_view(), name='chat-room-detail'),
+    path('chat/rooms/<uuid:room_id>/messages/', views.MessageListCreateView.as_view(), name='chat-messages'),
+    path('chat/rooms/<uuid:room_id>/read/', views.mark_messages_read, name='mark-read'),
 ]

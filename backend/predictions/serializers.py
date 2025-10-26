@@ -2,7 +2,7 @@
 Serializers for medical diagnosis predictions API.
 """
 from rest_framework import serializers
-from .models import Transaction, UserProfile, Patient
+from .models import Transaction, UserProfile, Patient, ChatRoom, Message
 from django.contrib.auth.models import User
 
 
@@ -143,3 +143,88 @@ class UserProfileSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+class UserBasicSerializer(serializers.ModelSerializer):
+    """Basic user info for chat."""
+    full_name = serializers.CharField(source='profile.full_name', read_only=True)
+    avatar = serializers.ImageField(source='profile.avatar', read_only=True)
+    role = serializers.CharField(source='profile.role', read_only=True)
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'full_name', 'avatar', 'role']
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    """Serializer for chat messages."""
+    sender = UserBasicSerializer(read_only=True)
+    is_read = serializers.SerializerMethodField()
+    
+    def get_is_read(self, obj):
+        request = self.context.get('request')
+        if request and request.user:
+            return obj.read_by.filter(id=request.user.id).exists()
+        return False
+    
+    class Meta:
+        model = Message
+        fields = ['id', 'room', 'sender', 'content', 'attachment_url', 'is_read', 'created_at']
+        read_only_fields = ['id', 'sender', 'created_at']
+
+
+class ChatRoomSerializer(serializers.ModelSerializer):
+    """Serializer for chat rooms."""
+    members = UserBasicSerializer(many=True, read_only=True)
+    member_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False
+    )
+    last_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+    
+    def get_last_message(self, obj):
+        last_msg = obj.messages.last()
+        if last_msg:
+            return {
+                'content': last_msg.content,
+                'sender': last_msg.sender.username,
+                'created_at': last_msg.created_at
+            }
+        return None
+    
+    def get_unread_count(self, obj):
+        request = self.context.get('request')
+        if request and request.user:
+            return obj.messages.exclude(read_by=request.user).exclude(sender=request.user).count()
+        return 0
+    
+    class Meta:
+        model = ChatRoom
+        fields = [
+            'id', 'name', 'room_type', 'members', 'member_ids', 
+            'patient', 'created_by', 'last_message', 'unread_count',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']
+    
+    def create(self, validated_data):
+        member_ids = validated_data.pop('member_ids', [])
+        request = self.context.get('request')
+        
+        # Create room
+        room = ChatRoom.objects.create(
+            created_by=request.user if request else None,
+            **validated_data
+        )
+        
+        # Add members
+        if member_ids:
+            room.members.set(User.objects.filter(id__in=member_ids))
+        
+        # Always add creator
+        if request and request.user:
+            room.members.add(request.user)
+        
+        return room

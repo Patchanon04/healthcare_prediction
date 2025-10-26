@@ -21,13 +21,16 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.authtoken.models import Token
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-from .models import Transaction, UserProfile, Patient
+from .models import Transaction, UserProfile, Patient, ChatRoom, Message
 from .serializers import (
     TransactionSerializer,
     UploadImageSerializer,
     RegisterSerializer,
     LoginSerializer,
     UserProfileSerializer,
+    ChatRoomSerializer,
+    MessageSerializer,
+    UserBasicSerializer,
     PatientSerializer,
 )
 
@@ -588,3 +591,82 @@ def reports_summary(request):
         'diagnosis_distribution': diagnosis_distribution,
         'recent_transactions': transactions_data,
     })
+
+
+# ==================== Chat API Views ====================
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def list_users(request):
+    """List all users for chat (excluding current user)."""
+    from django.contrib.auth.models import User
+    users = User.objects.exclude(id=request.user.id).select_related('profile')
+    serializer = UserBasicSerializer(users, many=True)
+    return Response({'users': serializer.data})
+
+
+class ChatRoomListCreateView(generics.ListCreateAPIView):
+    """List chat rooms or create a new one."""
+    serializer_class = ChatRoomSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = DefaultPagination
+    
+    def get_queryset(self):
+        """Return rooms where user is a member."""
+        return ChatRoom.objects.filter(members=self.request.user).prefetch_related('members', 'messages')
+    
+    def perform_create(self, serializer):
+        """Create room and add current user as member."""
+        serializer.save()
+
+
+class ChatRoomDetailView(generics.RetrieveAPIView):
+    """Get details of a specific chat room."""
+    serializer_class = ChatRoomSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        """Only allow access to rooms where user is a member."""
+        return ChatRoom.objects.filter(members=self.request.user).prefetch_related('members', 'messages')
+
+
+class MessageListCreateView(generics.ListCreateAPIView):
+    """List messages in a room or create a new message."""
+    serializer_class = MessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = DefaultPagination
+    
+    def get_queryset(self):
+        """Return messages for a specific room."""
+        room_id = self.kwargs.get('room_id')
+        # Verify user is member of this room
+        if not ChatRoom.objects.filter(id=room_id, members=self.request.user).exists():
+            return Message.objects.none()
+        return Message.objects.filter(room_id=room_id).select_related('sender', 'sender__profile')
+    
+    def perform_create(self, serializer):
+        """Create message with current user as sender."""
+        room_id = self.kwargs.get('room_id')
+        room = ChatRoom.objects.get(id=room_id, members=self.request.user)
+        serializer.save(sender=self.request.user, room=room)
+        # Update room's updated_at
+        room.save()
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def mark_messages_read(request, room_id):
+    """Mark messages as read."""
+    message_ids = request.data.get('message_ids', [])
+    if not message_ids:
+        return Response({'error': 'message_ids required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Verify user is member of room
+    if not ChatRoom.objects.filter(id=room_id, members=request.user).exists():
+        return Response({'error': 'Not a member of this room'}, status=status.HTTP_403_FORBIDDEN)
+    
+    messages = Message.objects.filter(id__in=message_ids, room_id=room_id)
+    for msg in messages:
+        msg.read_by.add(request.user)
+    
+    return Response({'status': 'success', 'marked_count': messages.count()})

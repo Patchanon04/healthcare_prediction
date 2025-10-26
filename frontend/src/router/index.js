@@ -5,6 +5,7 @@ import PatientsList from '../views/PatientsList.vue'
 import Dashboard from '../views/Dashboard.vue'
 import PatientDetail from '../views/PatientDetail.vue'
 import ProfileView from '../views/ProfileView.vue'
+import ChatView from '../views/ChatView.vue'
 
 const routes = [
   { path: '/', redirect: '/patients' },
@@ -14,6 +15,7 @@ const routes = [
   { path: '/patients', name: 'Patients', component: PatientsList, meta: { title: 'Patients' } },
   { path: '/patients/:id', name: 'PatientDetail', component: PatientDetail, props: true },
   { path: '/profile', name: 'Profile', component: ProfileView },
+  { path: '/chat', name: 'Chat', component: ChatView, meta: { title: 'Chat' } },
 ]
 
 const router = createRouter({

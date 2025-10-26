@@ -177,4 +177,44 @@ export const updateProfile = async (profileData) => {
   return response.data
 }
 
+// Chat APIs
+export const listChatUsers = async () => {
+  const response = await api.get('/api/v1/chat/users/')
+  return response.data
+}
+
+export const listChatRooms = async ({ page = 1, pageSize = 20 } = {}) => {
+  const response = await api.get('/api/v1/chat/rooms/', {
+    params: { page, page_size: pageSize }
+  })
+  return response.data
+}
+
+export const getChatRoom = async (roomId) => {
+  const response = await api.get(`/api/v1/chat/rooms/${roomId}/`)
+  return response.data
+}
+
+export const createChatRoom = async (data) => {
+  const response = await api.post('/api/v1/chat/rooms/', data)
+  return response.data
+}
+
+export const listMessages = async (roomId, { page = 1, pageSize = 50 } = {}) => {
+  const response = await api.get(`/api/v1/chat/rooms/${roomId}/messages/`, {
+    params: { page, page_size: pageSize }
+  })
+  return response.data
+}
+
+export const sendMessage = async (roomId, content) => {
+  const response = await api.post(`/api/v1/chat/rooms/${roomId}/messages/`, { content })
+  return response.data
+}
+
+export const markMessagesRead = async (roomId, messageIds) => {
+  const response = await api.post(`/api/v1/chat/rooms/${roomId}/read/`, { message_ids: messageIds })
+  return response.data
+}
+
 export default api

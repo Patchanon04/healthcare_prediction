@@ -2,7 +2,7 @@
 Admin configuration for predictions app.
 """
 from django.contrib import admin
-from .models import Transaction, Patient
+from .models import Transaction, Patient, ChatRoom, Message
 
 
 @admin.register(Transaction)
@@ -43,3 +43,27 @@ class PatientAdmin(admin.ModelAdmin):
     list_display = ['id', 'full_name', 'mrn', 'phone', 'age', 'gender', 'created_at']
     search_fields = ['full_name', 'mrn', 'phone']
     list_filter = ['gender', 'created_at']
+
+
+@admin.register(ChatRoom)
+class ChatRoomAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'room_type', 'member_count', 'created_by', 'created_at']
+    list_filter = ['room_type', 'created_at']
+    search_fields = ['name', 'members__username']
+    filter_horizontal = ['members']
+    
+    def member_count(self, obj):
+        return obj.members.count()
+    member_count.short_description = 'Members'
+
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ['id', 'room', 'sender', 'content_preview', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['content', 'sender__username', 'room__name']
+    readonly_fields = ['created_at']
+    
+    def content_preview(self, obj):
+        return obj.content[:50] + '...' if len(obj.content) > 50 else obj.content
+    content_preview.short_description = 'Content'

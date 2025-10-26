@@ -84,3 +84,61 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.diagnosis} - {self.confidence:.2f} ({self.uploaded_at})"
+
+
+class ChatRoom(models.Model):
+    """
+    Chat room for real-time messaging between users.
+    Can be direct message (2 users) or group chat.
+    """
+    ROOM_TYPE_CHOICES = [
+        ('direct', 'Direct Message'),
+        ('group', 'Group Chat'),
+        ('case', 'Case Discussion'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255, blank=True, help_text="Room name for group chats")
+    room_type = models.CharField(max_length=10, choices=ROOM_TYPE_CHOICES, default='direct')
+    members = models.ManyToManyField(User, related_name='chat_rooms')
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='chat_rooms', null=True, blank=True, help_text="Associated patient for case discussions")
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_rooms')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'chat_rooms'
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['room_type'], name='room_type_idx'),
+            models.Index(fields=['updated_at'], name='room_updated_idx'),
+        ]
+    
+    def __str__(self):
+        if self.name:
+            return self.name
+        members = self.members.all()[:2]
+        return f"Chat: {', '.join([u.username for u in members])}"
+
+
+class Message(models.Model):
+    """
+    Individual message in a chat room.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    room = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    content = models.TextField()
+    attachment_url = models.URLField(max_length=500, blank=True, help_text="URL to attached file/image")
+    read_by = models.ManyToManyField(User, related_name='read_messages', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'messages'
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['room', 'created_at'], name='room_created_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.sender.username}: {self.content[:50]}"
