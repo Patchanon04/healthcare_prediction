@@ -253,7 +253,7 @@ class TreatmentPlanSerializer(serializers.ModelSerializer):
             'start_date', 'end_date', 'status', 'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'patient', 'patient_name', 'created_by', 'created_by_name', 'created_at', 'updated_at']
 
 
 class MedicationSerializer(serializers.ModelSerializer):
@@ -277,7 +277,7 @@ class MedicationSerializer(serializers.ModelSerializer):
             'frequency', 'route', 'instructions', 'start_date', 'end_date', 'status',
             'prescribed_by', 'prescribed_by_name', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'patient', 'patient_name', 'prescribed_by', 'prescribed_by_name', 'created_at', 'updated_at']
 
 
 class FollowUpNoteSerializer(serializers.ModelSerializer):
@@ -300,4 +300,4 @@ class FollowUpNoteSerializer(serializers.ModelSerializer):
             'id', 'patient', 'patient_name', 'treatment_plan', 'title', 'note',
             'note_type', 'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'patient', 'patient_name', 'created_by', 'created_by_name', 'created_at', 'updated_at']
