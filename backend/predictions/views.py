@@ -687,3 +687,83 @@ def mark_messages_read(request, room_id):
         pass
     
     return Response({'status': 'success', 'marked_count': messages.count()})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_unread_count(request):
+    """Get total unread message count for current user."""
+    unread_count = Message.objects.filter(
+        room__members=request.user
+    ).exclude(
+        read_by=request.user
+    ).exclude(
+        sender=request.user
+    ).count()
+    
+    return Response({'unread_count': unread_count})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def global_search(request):
+    """Global search across patients, diagnoses, and chat messages."""
+    query = request.GET.get('q', '').strip()
+    if not query or len(query) < 2:
+        return Response({
+            'patients': [],
+            'diagnoses': [],
+            'messages': [],
+            'total': 0
+        })
+    
+    # Search patients
+    patients = Patient.objects.filter(
+        models.Q(full_name__icontains=query) |
+        models.Q(mrn__icontains=query) |
+        models.Q(phone__icontains=query)
+    )[:10]
+    
+    # Search diagnoses (transactions)
+    diagnoses = Transaction.objects.filter(
+        models.Q(diagnosis__icontains=query) |
+        models.Q(patient__full_name__icontains=query) |
+        models.Q(patient__mrn__icontains=query)
+    ).select_related('patient').order_by('-uploaded_at')[:10]
+    
+    # Search chat messages (only in rooms user is member of)
+    messages = Message.objects.filter(
+        room__members=request.user,
+        content__icontains=query
+    ).select_related('sender', 'room').order_by('-created_at')[:10]
+    
+    # Serialize results
+    from .serializers import PatientSerializer, TransactionSerializer
+    
+    patient_results = PatientSerializer(patients, many=True).data
+    diagnosis_results = TransactionSerializer(diagnoses, many=True).data
+    
+    message_results = []
+    for msg in messages:
+        message_results.append({
+            'id': str(msg.id),
+            'content': msg.content,
+            'sender': {
+                'id': msg.sender.id,
+                'username': msg.sender.username,
+                'full_name': getattr(msg.sender.profile, 'full_name', '') if hasattr(msg.sender, 'profile') else ''
+            },
+            'room_id': str(msg.room.id),
+            'room_name': msg.room.name or 'Chat',
+            'created_at': msg.created_at.isoformat()
+        })
+    
+    total = len(patient_results) + len(diagnosis_results) + len(message_results)
+    
+    return Response({
+        'patients': patient_results,
+        'diagnoses': diagnosis_results,
+        'messages': message_results,
+        'total': total,
+        'query': query
+    })

@@ -240,4 +240,14 @@ export const markMessagesRead = async (roomId, messageIds) => {
   return response.data
 }
 
+export const getUnreadCount = async () => {
+  const response = await api.get('/api/v1/chat/unread-count/')
+  return response.data
+}
+
+export const globalSearch = async (query) => {
+  const response = await api.get('/api/v1/search/', { params: { q: query } })
+  return response.data
+}
+
 export default api

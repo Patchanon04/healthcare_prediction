@@ -33,4 +33,7 @@ urlpatterns = [
     path('chat/rooms/<uuid:pk>/', views.ChatRoomDetailView.as_view(), name='chat-room-detail'),
     path('chat/rooms/<uuid:room_id>/messages/', views.MessageListCreateView.as_view(), name='chat-messages'),
     path('chat/rooms/<uuid:room_id>/read/', views.mark_messages_read, name='mark-read'),
+    path('chat/unread-count/', views.get_unread_count, name='unread-count'),
+    # global search
+    path('search/', views.global_search, name='global-search'),
 ]

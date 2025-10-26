@@ -277,6 +277,8 @@ export default {
           await markMessagesRead(roomId, unreadIds)
           // Locally clear unread badge for this room
           setRoomUnread(roomId, 0)
+          // Notify AppShell to refresh unread count
+          window.dispatchEvent(new CustomEvent('messages-marked-read', { detail: { count: unreadIds.length } }))
         }
       } catch (err) {
         console.error('Failed to load messages:', err)
