@@ -62,7 +62,7 @@
           </div>
 
           <!-- Messages -->
-          <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-2">
+          <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-2 flex flex-col">
             <div v-if="loadingMessages" class="text-center text-gray-500">Loading messages...</div>
             <div v-else-if="messages.length === 0" class="text-center text-gray-400">
               No messages yet. Start the conversation!
@@ -72,7 +72,7 @@
               v-for="(msg, idx) in messages"
               :key="msg.id || idx"
               :class="[
-                'flex',
+                'flex w-full',
                 isSelf(msg) ? 'justify-end' : 'justify-start'
               ]"
             >

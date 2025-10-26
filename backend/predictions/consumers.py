@@ -104,6 +104,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             }
         )
+
+        # Send notifications to other members of the room
+        member_ids = await self.get_room_member_ids()
+        for uid in member_ids:
+            if uid == self.user.id:
+                continue
+            await self.channel_layer.group_send(
+                f'user_{uid}',
+                {
+                    'type': 'notify',
+                    'room_id': str(self.room_id),
+                    'sender': self.user.username,
+                    'content': content,
+                    'created_at': message.created_at.isoformat(),
+                }
+            )
     
     async def handle_typing(self, data):
         """Handle typing indicator."""
@@ -233,3 +249,37 @@ class ChatConsumer(AsyncWebsocketConsumer):
         messages = Message.objects.filter(id__in=message_ids, room_id=self.room_id)
         for msg in messages:
             msg.read_by.add(self.user)
+
+    @database_sync_to_async
+    def get_room_member_ids(self):
+        try:
+            room = ChatRoom.objects.get(id=self.room_id)
+            return list(room.members.values_list('id', flat=True))
+        except ChatRoom.DoesNotExist:
+            return []
+
+
+class NotificationConsumer(AsyncWebsocketConsumer):
+    """User-level notification channel. Group name: user_<user_id>."""
+    async def connect(self):
+        self.user = self.scope['user']
+        if not self.user.is_authenticated:
+            await self.close()
+            return
+        self.group_name = f'user_{self.user.id}'
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        if hasattr(self, 'group_name'):
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def notify(self, event):
+        # Forward notification to client
+        await self.send(text_data=json.dumps({
+            'type': 'notification',
+            'room_id': event.get('room_id'),
+            'sender': event.get('sender'),
+            'content': event.get('content'),
+            'created_at': event.get('created_at'),
+        }))

@@ -77,6 +77,22 @@
       </main>
     </div>
 
+    <!-- Toast Notification -->
+    <transition name="fade">
+      <div v-if="showToast" class="fixed top-4 right-4 z-50 bg-white shadow-xl rounded-lg p-4 w-80 border cursor-pointer" @click="openChatFromToast">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] text-white flex items-center justify-center font-semibold">
+            💬
+          </div>
+          <div class="flex-1">
+            <div class="text-sm text-gray-500">New message</div>
+            <div class="font-semibold text-[#2C597D]">{{ toastSender }}</div>
+            <div class="text-sm text-gray-700 line-clamp-2">{{ toastContent }}</div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <!-- Logout Confirmation Modal -->
     <div v-if="showLogoutModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click="showLogoutModal = false">
       <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4" @click.stop>
@@ -113,34 +129,72 @@ import { ref, onMounted } from 'vue'
 import { userStore } from '../store/user'
 
 export default {
-  name: 'AppShell',
-  props: { title: { type: String, default: '' } },
-  setup() {
-    const showLogoutModal = ref(false)
-
-    const fetchProfile = async () => {
-      try {
-        await userStore.fetchProfile()
-      } catch (e) {
+  props: {
+    title: { type: String, default: '' },
+  },
+  data() {
+    return {
+      showLogoutModal: false,
+      // Notification WS
+      notifWs: null,
+      showToast: false,
+      toastSender: '',
+      toastContent: '',
+      toastRoomId: null,
+    }
+  },
+  computed: {
+    profile: userStore.profile,
+  },
+  mounted() {
+    this.loadProfile()
+    this.connectNotifyWebSocket()
+  },
+  methods: {
+    loadProfile() {
+      userStore.fetchProfile().catch(e => {
         // token invalid, redirect to login
         localStorage.removeItem('token')
         window.location.href = '/login'
+      })
+    },
+    connectNotifyWebSocket() {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const wsUrl = `${process.env.VITE_API_URL || 'http://localhost:3000'}/ws/notify?token=${token}`
+      this.notifWs = new WebSocket(wsUrl)
+
+      this.notifWs.onmessage = event => {
+        const data = JSON.parse(event.data)
+        if (data.type === 'new_message') {
+          this.showToast(data.sender, data.content, data.room_id)
+        }
       }
-    }
 
-    const confirmLogout = () => {
-      showLogoutModal.value = true
-    }
-
-    const logout = () => {
+      this.notifWs.onclose = () => {
+        setTimeout(() => this.connectNotifyWebSocket(), 5000)
+      }
+    },
+    showToast(sender, content, roomId) {
+      this.showToast = true
+      this.toastSender = sender
+      this.toastContent = content
+      this.toastRoomId = roomId
+      setTimeout(() => this.showToast = false, 5000)
+    },
+    openChatFromToast() {
+      if (!this.toastRoomId) return
+      this.$router.push({ name: 'Chat', params: { roomId: this.toastRoomId } })
+    },
+    confirmLogout() {
+      this.showLogoutModal = true
+    },
+    logout() {
       userStore.clearProfile()
       localStorage.removeItem('token')
       window.location.href = '/login'
-    }
-
-    onMounted(fetchProfile)
-
-    return { profile: userStore.profile, showLogoutModal, confirmLogout, logout }
+    },
   }
 }
 </script>
