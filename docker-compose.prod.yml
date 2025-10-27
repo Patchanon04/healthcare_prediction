@@ -38,6 +38,10 @@ services:
       - "127.0.0.1:5001:5000"  # Only localhost can access
     environment:
       - PYTHONUNBUFFERED=1
+      - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME:-us-east-1}
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:5000/health/')"]
       interval: 30s
