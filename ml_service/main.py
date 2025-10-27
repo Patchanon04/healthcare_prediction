@@ -50,9 +50,9 @@ S3_BUCKET = os.getenv("AWS_STORAGE_BUCKET_NAME", "your-bucket-name")
 AWS_REGION = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
 
 # Model paths in S3
-MODEL1_JSON_KEY = "models/brain_tumor/model1/model.json"
-MODEL1_WEIGHTS_KEY = "models/brain_tumor/model1/model.h5"
-MODEL2_KEY = "models/brain_tumor/model2/cnn-parameters-improvement-23-0.91.model"
+MODEL1_JSON_KEY = os.getenv("MODEL1_JSON_KEY", "models/brain_tumor/model1/model.json")
+MODEL1_WEIGHTS_KEY = os.getenv("MODEL1_WEIGHTS_KEY", "models/brain_tumor/model1/model.h5")
+MODEL2_KEY = os.getenv("MODEL2_KEY", "models/brain_tumor/model2/cnn-parameters-improvement-23-0.91.model")
 
 # Global variables for models
 s3_loader = None
