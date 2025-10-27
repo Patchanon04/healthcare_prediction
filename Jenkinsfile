@@ -104,23 +104,29 @@ pipeline {
     stage('Run Unit Tests') {
       steps {
         dir(env.WORKDIR) {
-          sh '''
-            set -e
-            echo "Preparing environment args for docker-compose..."
-            EF=""
-            for p in "${ENV_FILE}" "/var/lib/jenkins/.env" "./.env"; do
-              if [ -n "$p" ] && [ -r "$p" ]; then EF="$p"; break; fi
-            done
-            if [ -n "$EF" ]; then ENV_ARG="--env-file $EF"; else ENV_ARG=""; fi
-            echo "Using env file: ${EF:-<none>}"
+          retry(2) {
+            sh '''
+              set -e
+              echo "Preparing environment args for docker-compose..."
+              EF=""
+              for p in "${ENV_FILE}" "/var/lib/jenkins/.env" "./.env"; do
+                if [ -n "$p" ] && [ -r "$p" ]; then EF="$p"; break; fi
+              done
+              if [ -n "$EF" ]; then ENV_ARG="--env-file $EF"; else ENV_ARG=""; fi
+              echo "Using env file: ${EF:-<none>}"
 
-            echo "🧪 Running Django unit tests..."
-            
-            # Run all unit tests
-            docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend python manage.py test predictions.test_patients predictions.test_chat predictions.test_treatments predictions.tests --verbosity=2
-            
-            echo "✅ All unit tests passed!"
-          '''
+              echo "🧪 Running Django unit tests..."
+              
+              # Wait for database to be ready
+              echo "Waiting for database..."
+              sleep 5
+              
+              # Run all unit tests
+              docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend python manage.py test predictions.test_patients predictions.test_chat predictions.test_treatments predictions.tests --verbosity=2
+              
+              echo "✅ All unit tests passed!"
+            '''
+          }
         }
       }
     }
