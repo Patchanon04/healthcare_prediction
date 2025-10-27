@@ -9,7 +9,7 @@ from channels.testing import WebsocketCommunicator
 from channels.routing import URLRouter
 from django.urls import re_path
 
-from .models import ChatRoom, ChatMessage
+from .models import ChatRoom, Message
 
 User = get_user_model()
 
@@ -52,8 +52,8 @@ class ChatRoomModelTestCase(TestCase):
         self.assertEqual(str(room), 'Test Room')
 
 
-class ChatMessageModelTestCase(TestCase):
-    """Test cases for ChatMessage model."""
+class MessageModelTestCase(TestCase):
+    """Test cases for Message model."""
     
     def setUp(self):
         self.user1 = User.objects.create_user(
@@ -74,7 +74,7 @@ class ChatMessageModelTestCase(TestCase):
     
     def test_create_message(self):
         """Test creating a chat message."""
-        message = ChatMessage.objects.create(
+        message = Message.objects.create(
             room=self.room,
             sender=self.user1,
             content='Hello, World!'
@@ -87,7 +87,7 @@ class ChatMessageModelTestCase(TestCase):
     
     def test_mark_message_as_read(self):
         """Test marking message as read."""
-        message = ChatMessage.objects.create(
+        message = Message.objects.create(
             room=self.room,
             sender=self.user1,
             content='Test message'
@@ -183,11 +183,11 @@ class ChatRoomAPITestCase(TestCase):
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()['content'], 'Hello from test!')
-        self.assertEqual(ChatMessage.objects.count(), 1)
+        self.assertEqual(Message.objects.count(), 1)
     
     def test_mark_messages_as_read(self):
         """Test marking messages as read."""
-        message = ChatMessage.objects.create(
+        message = Message.objects.create(
             room=self.room,
             sender=self.user2,
             content='Unread message'

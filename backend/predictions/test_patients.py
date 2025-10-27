@@ -7,7 +7,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from datetime import date
 
-from .models import Patient, Diagnosis
+from .models import Patient
 
 User = get_user_model()
 
@@ -27,32 +27,32 @@ class PatientModelTestCase(TestCase):
         patient = Patient.objects.create(
             mrn='MRN001',
             full_name='John Doe',
-            date_of_birth=date(1990, 1, 1),
-            gender='male',
+            age=34,
+            gender='M',
             phone='0812345678',
-            email='john@example.com',
-            address='123 Test St',
+            notes='Test patient',
             created_by=self.user
         )
         
         self.assertEqual(patient.mrn, 'MRN001')
         self.assertEqual(patient.full_name, 'John Doe')
-        self.assertEqual(patient.gender, 'male')
+        self.assertEqual(patient.gender, 'M')
+        self.assertEqual(patient.age, 34)
         self.assertIsNotNone(patient.created_at)
     
-    def test_patient_age_calculation(self):
-        """Test patient age calculation."""
+    def test_patient_age_field(self):
+        """Test patient age field."""
         patient = Patient.objects.create(
             mrn='MRN002',
             full_name='Jane Doe',
-            date_of_birth=date(2000, 1, 1),
-            gender='female',
+            age=24,
+            gender='F',
             created_by=self.user
         )
         
-        # Age should be calculated correctly
+        # Age should be stored correctly
         self.assertIsInstance(patient.age, int)
-        self.assertGreaterEqual(patient.age, 0)
+        self.assertEqual(patient.age, 24)
 
 
 class PatientAPITestCase(TestCase):
@@ -71,16 +71,16 @@ class PatientAPITestCase(TestCase):
         self.patient1 = Patient.objects.create(
             mrn='MRN001',
             full_name='John Doe',
-            date_of_birth=date(1990, 1, 1),
-            gender='male',
+            age=34,
+            gender='M',
             phone='0812345678',
             created_by=self.user
         )
         self.patient2 = Patient.objects.create(
             mrn='MRN002',
             full_name='Jane Smith',
-            date_of_birth=date(1985, 5, 15),
-            gender='female',
+            age=39,
+            gender='F',
             phone='0823456789',
             created_by=self.user
         )
@@ -107,10 +107,9 @@ class PatientAPITestCase(TestCase):
         data = {
             'mrn': 'MRN003',
             'full_name': 'Bob Johnson',
-            'date_of_birth': '1995-03-20',
-            'gender': 'male',
-            'phone': '0834567890',
-            'email': 'bob@example.com'
+            'age': 29,
+            'gender': 'M',
+            'phone': '0834567890'
         }
         
         response = self.client.post('/api/v1/patients/', data)
@@ -158,59 +157,5 @@ class PatientAPITestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-class DiagnosisAPITestCase(TestCase):
-    """Test cases for Diagnosis API endpoints."""
-    
-    def setUp(self):
-        self.client = APIClient()
-        self.user = User.objects.create_user(
-            username='testdoc',
-            email='doc@test.com',
-            password='testpass123'
-        )
-        self.client.force_authenticate(user=self.user)
-        
-        self.patient = Patient.objects.create(
-            mrn='MRN001',
-            full_name='John Doe',
-            date_of_birth=date(1990, 1, 1),
-            gender='male',
-            created_by=self.user
-        )
-    
-    def test_create_diagnosis(self):
-        """Test creating a diagnosis for a patient."""
-        data = {
-            'patient': self.patient.id,
-            'diagnosis': 'Labrador Retriever',
-            'confidence': 0.95,
-            'image_url': 'https://example.com/dog.jpg',
-            'notes': 'Test diagnosis'
-        }
-        
-        response = self.client.post('/api/v1/diagnoses/', data)
-        
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.json()['diagnosis'], 'Labrador Retriever')
-        self.assertEqual(Diagnosis.objects.count(), 1)
-    
-    def test_list_patient_diagnoses(self):
-        """Test listing diagnoses for a specific patient."""
-        # Create diagnoses
-        Diagnosis.objects.create(
-            patient=self.patient,
-            diagnosis='Breed A',
-            confidence=0.90,
-            created_by=self.user
-        )
-        Diagnosis.objects.create(
-            patient=self.patient,
-            diagnosis='Breed B',
-            confidence=0.85,
-            created_by=self.user
-        )
-        
-        response = self.client.get(f'/api/v1/patients/{self.patient.id}/diagnoses/')
-        
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(response.json()), 2)
+# Note: Diagnosis functionality is handled through Transaction model
+# These tests are covered in predictions.tests

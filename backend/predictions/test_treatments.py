@@ -24,8 +24,8 @@ class TreatmentPlanModelTestCase(TestCase):
         self.patient = Patient.objects.create(
             mrn='MRN001',
             full_name='John Doe',
-            date_of_birth=date(1990, 1, 1),
-            gender='male',
+            age=34,
+            gender='M',
             created_by=self.user
         )
     
@@ -70,8 +70,8 @@ class MedicationModelTestCase(TestCase):
         self.patient = Patient.objects.create(
             mrn='MRN001',
             full_name='John Doe',
-            date_of_birth=date(1990, 1, 1),
-            gender='male',
+            age=34,
+            gender='M',
             created_by=self.user
         )
     
@@ -107,8 +107,8 @@ class TreatmentPlanAPITestCase(TestCase):
         self.patient = Patient.objects.create(
             mrn='MRN001',
             full_name='John Doe',
-            date_of_birth=date(1990, 1, 1),
-            gender='male',
+            age=34,
+            gender='M',
             created_by=self.user
         )
         
@@ -181,8 +181,8 @@ class MedicationAPITestCase(TestCase):
         self.patient = Patient.objects.create(
             mrn='MRN001',
             full_name='John Doe',
-            date_of_birth=date(1990, 1, 1),
-            gender='male',
+            age=34,
+            gender='M',
             created_by=self.user
         )
         
@@ -257,8 +257,8 @@ class FollowUpNoteAPITestCase(TestCase):
         self.patient = Patient.objects.create(
             mrn='MRN001',
             full_name='John Doe',
-            date_of_birth=date(1990, 1, 1),
-            gender='male',
+            age=34,
+            gender='M',
             created_by=self.user
         )
     
