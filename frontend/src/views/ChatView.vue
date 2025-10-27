@@ -497,7 +497,7 @@ export default {
     }
 
     // Handle user change event (dispatched from login/logout)
-    const handleUserChange = async () => {
+    const handleUserChange = async (newUserId = null) => {
       console.log('👤 User change detected, reloading...')
       
       await loadCurrentUser()
@@ -510,6 +510,10 @@ export default {
       }
       selectedRoom.value = null
       messages.value = []
+      
+      // Update lastUserId after loading
+      lastUserId = currentUserId.value
+      console.log('✅ User reloaded. New ID:', lastUserId)
     }
 
     // Poll for user changes (in case of account switch without page reload)
@@ -534,8 +538,7 @@ export default {
             const user = JSON.parse(userStr)
             if (user.id && String(user.id) !== String(lastUserId)) {
               console.log('🔄 User ID changed from', lastUserId, 'to', user.id)
-              lastUserId = user.id
-              handleUserChange()
+              handleUserChange(user.id)
             }
           } catch (e) {
             // ignore
@@ -543,8 +546,7 @@ export default {
         } else if (lastUserId) {
           // User logged out
           console.log('🚪 User logged out')
-          lastUserId = null
-          handleUserChange()
+          handleUserChange(null)
         }
       }, 2000)
       
