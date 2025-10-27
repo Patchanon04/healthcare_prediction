@@ -101,6 +101,63 @@ pipeline {
       }
     }
 
+    stage('Run Unit Tests') {
+      steps {
+        dir(env.WORKDIR) {
+          sh '''
+            set -e
+            echo "Preparing environment args for docker-compose..."
+            EF=""
+            for p in "${ENV_FILE}" "/var/lib/jenkins/.env" "./.env"; do
+              if [ -n "$p" ] && [ -r "$p" ]; then EF="$p"; break; fi
+            done
+            if [ -n "$EF" ]; then ENV_ARG="--env-file $EF"; else ENV_ARG=""; fi
+            echo "Using env file: ${EF:-<none>}"
+
+            echo "🧪 Running Django unit tests..."
+            
+            # Run all unit tests
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend python manage.py test predictions.test_patients predictions.test_chat predictions.test_treatments predictions.tests --verbosity=2
+            
+            echo "✅ All unit tests passed!"
+          '''
+        }
+      }
+    }
+
+    stage('Generate Test Coverage') {
+      steps {
+        dir(env.WORKDIR) {
+          sh '''
+            set -e
+            echo "Preparing environment args for docker-compose..."
+            EF=""
+            for p in "${ENV_FILE}" "/var/lib/jenkins/.env" "./.env"; do
+              if [ -n "$p" ] && [ -r "$p" ]; then EF="$p"; break; fi
+            done
+            if [ -n "$EF" ]; then ENV_ARG="--env-file $EF"; else ENV_ARG=""; fi
+            echo "Using env file: ${EF:-<none>}"
+
+            echo "📊 Generating test coverage report..."
+            
+            # Install coverage if not present
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend pip install coverage || true
+            
+            # Run tests with coverage
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend coverage run --source='predictions' manage.py test predictions.test_patients predictions.test_chat predictions.test_treatments predictions.tests
+            
+            # Generate coverage report
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend coverage report
+            
+            # Generate HTML coverage report
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend coverage html || true
+            
+            echo "✅ Coverage report generated!"
+          '''
+        }
+      }
+    }
+
     stage('Update Nginx Config') {
       steps {
         dir(env.WORKDIR) {

@@ -1,16 +1,20 @@
-.PHONY: help build up down restart logs test clean migrate shell
+.PHONY: help build up down restart logs test clean migrate shell test-unit test-e2e test-all test-coverage
 
 help:
 	@echo "Available commands:"
-	@echo "  make build      - Build all Docker images"
-	@echo "  make up         - Start all services"
-	@echo "  make down       - Stop all services"
-	@echo "  make restart    - Restart all services"
-	@echo "  make logs       - View logs from all services"
-	@echo "  make test       - Run all tests"
-	@echo "  make migrate    - Run Django migrations"
-	@echo "  make shell      - Open Django shell"
-	@echo "  make clean      - Remove all containers, volumes, and images"
+	@echo "  make build          - Build all Docker images"
+	@echo "  make up             - Start all services"
+	@echo "  make down           - Stop all services"
+	@echo "  make restart        - Restart all services"
+	@echo "  make logs           - View logs from all services"
+	@echo "  make test           - Run all tests"
+	@echo "  make test-unit      - Run Django unit tests"
+	@echo "  make test-e2e       - Run Selenium E2E tests"
+	@echo "  make test-all       - Run all tests (unit + E2E)"
+	@echo "  make test-coverage  - Run tests with coverage report"
+	@echo "  make migrate        - Run Django migrations"
+	@echo "  make shell          - Open Django shell"
+	@echo "  make clean          - Remove all containers, volumes, and images"
 
 build:
 	docker-compose build
@@ -32,6 +36,24 @@ test:
 	docker-compose exec backend pytest
 	@echo "Running ML service tests..."
 	docker-compose exec ml_service pytest
+
+test-unit:
+	@echo "Running Django unit tests..."
+	cd backend && python manage.py test predictions.test_patients predictions.test_chat predictions.test_treatments predictions.tests
+
+test-e2e:
+	@echo "Running Selenium E2E tests..."
+	cd tests && python -m pytest e2e/ -v
+
+test-all: test-unit test-e2e
+	@echo "All tests completed!"
+
+test-coverage:
+	@echo "Running tests with coverage..."
+	cd backend && coverage run --source='.' manage.py test
+	cd backend && coverage report
+	cd backend && coverage html
+	@echo "Coverage report generated in backend/htmlcov/index.html"
 
 migrate:
 	docker-compose exec backend python manage.py migrate
