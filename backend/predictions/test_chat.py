@@ -147,7 +147,7 @@ class ChatRoomAPITestCase(TestCase):
             'members': [self.user1.id, self.user2.id]
         }
         
-        response = self.client.post('/api/v1/chat/rooms/', data)
+        response = self.client.post('/api/v1/chat/rooms/', data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()['name'], 'New Room')
@@ -173,14 +173,17 @@ class ChatRoomAPITestCase(TestCase):
         self.assertIn('results', response.json())
         self.assertGreaterEqual(len(response.json()['results']), 2)
     
-    @unittest.skip("Message content field validation not matching API")
     def test_send_message(self):
         """Test sending a message."""
         data = {
             'content': 'Hello from test!'
         }
         
-        response = self.client.post(f'/api/v1/chat/rooms/{self.room.id}/messages/', data)
+        response = self.client.post(
+            f'/api/v1/chat/rooms/{self.room.id}/messages/', 
+            data,
+            format='json'  # Important: use JSON format
+        )
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()['content'], 'Hello from test!')

@@ -1,6 +1,7 @@
 """
 Unit tests for the predictions app.
 """
+import unittest
 import uuid
 from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -73,8 +74,11 @@ class TransactionHistoryTestCase(TestCase):
     
     def test_get_history_first_page(self):
         """Test getting first page of history."""
-        response = self.client.get('/api/v1/history/')
+        # Verify transactions were created
+        count = Transaction.objects.filter(user=self.user).count()
+        self.assertEqual(count, 15, "Transactions should be created in setUp")
         
+        response = self.client.get('/api/v1/history/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('results', response.json())
         self.assertIn('count', response.json())
@@ -85,12 +89,13 @@ class TransactionHistoryTestCase(TestCase):
         response = self.client.get('/api/v1/history/?page=2&page_size=5')
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.json())
+        # Page 2 with page_size=5 should have 5 results (items 11-15)
         self.assertEqual(len(response.json()['results']), 5)
 
 
 class UploadImageTestCase(TestCase):
     """
-    Test cases for image upload endpoint.
     """
     
     def setUp(self):
@@ -124,7 +129,14 @@ class UploadImageTestCase(TestCase):
         user = User.objects.create_user(username='testuser', password='testpass')
         self.client.force_authenticate(user=user)
         
-        response = self.client.post('/api/v1/upload/', {'image': image}, format='multipart')
+        # Include required patient info
+        response = self.client.post('/api/v1/upload/', {
+            'image': image,
+            'patient_name': 'Test Patient',
+            'age': 30,
+            'gender': 'M',
+            'mrn': 'TEST001'
+        }, format='multipart')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response.json()

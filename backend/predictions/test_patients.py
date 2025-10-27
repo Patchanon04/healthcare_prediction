@@ -110,7 +110,7 @@ class PatientAPITestCase(TestCase):
             'phone': '0834567890'
         }
         
-        response = self.client.post('/api/v1/patients/', data)
+        response = self.client.post('/api/v1/patients/', data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()['mrn'], 'MRN003')
@@ -123,7 +123,7 @@ class PatientAPITestCase(TestCase):
             'phone': '0899999999'
         }
         
-        response = self.client.patch(f'/api/v1/patients/{self.patient1.id}/', data)
+        response = self.client.patch(f'/api/v1/patients/{self.patient1.id}/', data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.patient1.refresh_from_db()
