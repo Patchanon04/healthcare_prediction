@@ -118,8 +118,18 @@ class UploadImageTestCase(TestCase):
             'processing_time': 0.5
         }
         
-        # Create test image
-        image_content = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\x00\x00\x21\xf9\x04\x01\x00\x00\x00\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x01\x44\x00\x3b'
+        # Create test image - minimal valid JPEG
+        # JPEG header: FF D8 FF (start of image) + minimal data + FF D9 (end of image)
+        image_content = (
+            b'\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00'
+            b'\xFF\xDB\x00\x43\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\x09\x09'
+            b'\x08\x0A\x0C\x14\x0D\x0C\x0B\x0B\x0C\x19\x12\x13\x0F\x14\x1D\x1A\x1F'
+            b'\x1E\x1D\x1A\x1C\x1C\x20\x24\x2E\x27\x20\x22\x2C\x23\x1C\x1C\x28\x37'
+            b'\x29\x2C\x30\x31\x34\x34\x34\x1F\x27\x39\x3D\x38\x32\x3C\x2E\x33\x34'
+            b'\x32\xFF\xC0\x00\x0B\x08\x00\x01\x00\x01\x01\x01\x11\x00\xFF\xC4\x00'
+            b'\x14\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            b'\x00\x00\xFF\xDA\x00\x08\x01\x01\x00\x00\x3F\x00\xD2\xCF\x20\xFF\xD9'
+        )
         image = SimpleUploadedFile(
             "test_dog.jpg",
             image_content,
@@ -138,11 +148,6 @@ class UploadImageTestCase(TestCase):
             'gender': 'M',
             'mrn': 'TEST001'
         }, format='multipart')
-        
-        # Debug if fails
-        if response.status_code != status.HTTP_201_CREATED:
-            print(f"Upload failed: {response.status_code}")
-            print(f"Response: {response.json()}")
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response.json()

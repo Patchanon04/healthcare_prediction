@@ -186,10 +186,6 @@ class ChatRoomAPITestCase(TestCase):
             format='json'  # Important: use JSON format
         )
         
-        # Debug if fails
-        if response.status_code != status.HTTP_201_CREATED:
-            print(f"Response: {response.status_code}, Data: {response.json()}")
-        
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()['content'], 'Hello from test!')
         self.assertEqual(Message.objects.count(), 1)
