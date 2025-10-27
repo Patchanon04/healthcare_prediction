@@ -302,6 +302,32 @@ export default {
       
       try {
         const roomType = selectedUserIds.value.length === 1 ? 'direct' : 'group'
+        
+        // Check if direct chat with this user already exists
+        if (roomType === 'direct') {
+          const targetUserId = selectedUserIds.value[0]
+          const existingRoom = rooms.value.find(room => {
+            // Check if it's a direct chat
+            if (room.room_type !== 'direct') return false
+            
+            // Check if members match (current user + target user)
+            const memberIds = room.members.map(m => m.id)
+            return memberIds.includes(targetUserId) && 
+                   memberIds.includes(currentUserId.value) && 
+                   memberIds.length === 2
+          })
+          
+          if (existingRoom) {
+            console.log('📍 Direct chat already exists, navigating to it')
+            showNewChatModal.value = false
+            selectedUserIds.value = []
+            newRoomName.value = ''
+            selectRoom(existingRoom)
+            return
+          }
+        }
+        
+        // Create new room if not exists
         const data = await createChatRoom({
           name: newRoomName.value || '',
           room_type: roomType,
