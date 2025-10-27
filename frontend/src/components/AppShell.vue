@@ -542,6 +542,11 @@ export default {
     logout() {
       userStore.clearProfile()
       localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('user-changed'))
+      
       window.location.href = '/login'
     },
   }

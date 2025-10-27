@@ -467,7 +467,7 @@ export default {
       return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     }
 
-    onMounted(async () => {
+    const loadCurrentUser = async () => {
       try {
         const userStr = localStorage.getItem('user')
         if (userStr) {
@@ -494,9 +494,30 @@ export default {
       }
       
       console.log('🔑 Current User ID:', currentUserId.value, 'Username:', currentUsername.value)
-      
+    }
+
+    // Handle user change event (dispatched from login/logout)
+    const handleUserChange = async () => {
+      console.log('👤 User change detected, reloading...')
+      await loadCurrentUser()
       await fetchRooms()
       await fetchUsers()
+      
+      // Clear current selection
+      if (ws.value) {
+        ws.value.close()
+      }
+      selectedRoom.value = null
+      messages.value = []
+    }
+
+    onMounted(async () => {
+      await loadCurrentUser()
+      await fetchRooms()
+      await fetchUsers()
+      
+      // Listen for user change events
+      window.addEventListener('user-changed', handleUserChange)
       
       // Auto-select room from query param if present
       if (route.query.room) {
@@ -522,6 +543,8 @@ export default {
       if (ws.value) {
         ws.value.close()
       }
+      // Remove event listener
+      window.removeEventListener('user-changed', handleUserChange)
     })
 
     const isSelf = (msg) => {

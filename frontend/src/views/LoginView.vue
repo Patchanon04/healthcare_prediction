@@ -96,6 +96,10 @@ export default {
         if (data.user) {
           localStorage.setItem('user', JSON.stringify({ id: data.user.id, username: data.user.username }))
         }
+        
+        // Dispatch event to notify other components (e.g., ChatView)
+        window.dispatchEvent(new CustomEvent('user-changed'))
+        
         toast.success('Welcome!')
         // Go to intended path if provided, else default to patients
         if (redirectTo) {
