@@ -83,13 +83,12 @@ class MedicationModelTestCase(TestCase):
             dosage='100mg',
             frequency='Once daily',
             start_date=date.today(),
-            status='active',
-            created_by=self.user
+            prescribed_by=self.user
         )
         
         self.assertEqual(medication.drug_name, 'Aspirin')
+        self.assertEqual(medication.patient, self.patient)
         self.assertEqual(medication.dosage, '100mg')
-        self.assertEqual(medication.status, 'active')
 
 
 class TreatmentPlanAPITestCase(TestCase):
@@ -193,7 +192,7 @@ class MedicationAPITestCase(TestCase):
             frequency='Once daily',
             start_date=date.today(),
             status='active',
-            created_by=self.user
+            prescribed_by=self.user
         )
     
     def test_list_medications(self):

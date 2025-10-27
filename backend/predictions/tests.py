@@ -1,21 +1,23 @@
 """
-Tests for predictions API.
+Unit tests for the predictions app.
 """
 import uuid
-from unittest.mock import patch, MagicMock
 from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
+from unittest.mock import patch
 
 from .models import Transaction
+
+User = get_user_model()
 
 
 class HealthCheckTestCase(TestCase):
     """
     Test cases for health check endpoint.
     """
-    
     def setUp(self):
         self.client = APIClient()
     
@@ -56,6 +58,8 @@ class TransactionHistoryTestCase(TestCase):
     
     def setUp(self):
         self.client = APIClient()
+        self.user = User.objects.create_user(username='testuser', password='testpass')
+        self.client.force_authenticate(user=self.user)
         
         # Create test transactions
         for i in range(15):

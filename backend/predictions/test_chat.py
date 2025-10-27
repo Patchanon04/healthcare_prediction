@@ -83,7 +83,7 @@ class MessageModelTestCase(TestCase):
         self.assertEqual(message.content, 'Hello, World!')
         self.assertEqual(message.sender, self.user1)
         self.assertEqual(message.room, self.room)
-        self.assertFalse(message.is_read)
+        self.assertEqual(message.read_by.count(), 0)
     
     def test_mark_message_as_read(self):
         """Test marking message as read."""
@@ -93,10 +93,9 @@ class MessageModelTestCase(TestCase):
             content='Test message'
         )
         
-        message.is_read = True
-        message.save()
+        message.read_by.add(self.user2)
         
-        self.assertTrue(message.is_read)
+        self.assertIn(self.user2, message.read_by.all())
 
 
 class ChatRoomAPITestCase(TestCase):
@@ -156,12 +155,12 @@ class ChatRoomAPITestCase(TestCase):
     def test_list_messages(self):
         """Test listing messages in a room."""
         # Create test messages
-        ChatMessage.objects.create(
+        Message.objects.create(
             room=self.room,
             sender=self.user1,
             content='Message 1'
         )
-        ChatMessage.objects.create(
+        Message.objects.create(
             room=self.room,
             sender=self.user2,
             content='Message 2'
@@ -201,17 +200,17 @@ class ChatRoomAPITestCase(TestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         message.refresh_from_db()
-        self.assertTrue(message.is_read)
+        self.assertIn(self.user1, message.read_by.all())
     
     def test_get_unread_count(self):
         """Test getting unread message count."""
         # Create unread messages
-        ChatMessage.objects.create(
+        Message.objects.create(
             room=self.room,
             sender=self.user2,
             content='Unread 1'
         )
-        ChatMessage.objects.create(
+        Message.objects.create(
             room=self.room,
             sender=self.user2,
             content='Unread 2'
