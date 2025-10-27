@@ -499,11 +499,12 @@ export default {
     // Handle user change event (dispatched from login/logout)
     const handleUserChange = async () => {
       console.log('👤 User change detected, reloading...')
+      
       await loadCurrentUser()
       await fetchRooms()
       await fetchUsers()
       
-      // Clear current selection
+      // Clear current selection and force re-render
       if (ws.value) {
         ws.value.close()
       }
@@ -511,13 +512,41 @@ export default {
       messages.value = []
     }
 
+    // Poll for user changes (in case of account switch without page reload)
+    let userCheckInterval = null
+    let lastUserId = null
+
     onMounted(async () => {
       await loadCurrentUser()
+      lastUserId = currentUserId.value
+      
       await fetchRooms()
       await fetchUsers()
       
       // Listen for user change events
       window.addEventListener('user-changed', handleUserChange)
+      
+      // Poll every 2 seconds to detect user changes
+      userCheckInterval = setInterval(() => {
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr)
+            if (user.id && String(user.id) !== String(lastUserId)) {
+              console.log('🔄 User ID changed from', lastUserId, 'to', user.id)
+              lastUserId = user.id
+              handleUserChange()
+            }
+          } catch (e) {
+            // ignore
+          }
+        } else if (lastUserId) {
+          // User logged out
+          console.log('🚪 User logged out')
+          lastUserId = null
+          handleUserChange()
+        }
+      }, 2000)
       
       // Auto-select room from query param if present
       if (route.query.room) {
@@ -545,6 +574,10 @@ export default {
       }
       // Remove event listener
       window.removeEventListener('user-changed', handleUserChange)
+      // Clear interval
+      if (userCheckInterval) {
+        clearInterval(userCheckInterval)
+      }
     })
 
     const isSelf = (msg) => {
