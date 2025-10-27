@@ -500,20 +500,35 @@ export default {
     const handleUserChange = async (newUserId = null) => {
       console.log('👤 User change detected, reloading...')
       
+      // Store current messages before clearing
+      const currentMessages = [...messages.value]
+      const currentRoomId = selectedRoom.value?.id
+      
       await loadCurrentUser()
+      
+      // Update lastUserId after loading
+      lastUserId = currentUserId.value
+      console.log('✅ User reloaded. New ID:', lastUserId)
+      
       await fetchRooms()
       await fetchUsers()
       
-      // Clear current selection and force re-render
+      // Clear current selection
       if (ws.value) {
         ws.value.close()
       }
       selectedRoom.value = null
       messages.value = []
       
-      // Update lastUserId after loading
-      lastUserId = currentUserId.value
-      console.log('✅ User reloaded. New ID:', lastUserId)
+      // If we were viewing a room, reload it to force re-render with new user context
+      if (currentRoomId && currentMessages.length > 0) {
+        await nextTick()
+        const room = rooms.value.find(r => r.id === currentRoomId)
+        if (room) {
+          console.log('🔄 Re-selecting room to force re-render')
+          selectRoom(room)
+        }
+      }
     }
 
     // Poll for user changes (in case of account switch without page reload)
