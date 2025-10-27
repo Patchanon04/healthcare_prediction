@@ -65,6 +65,7 @@ class TransactionHistoryTestCase(TestCase):
         # Create test transactions
         for i in range(15):
             Transaction.objects.create(
+                user=self.user,
                 image_url=f"https://example.com/dog{i}.jpg",
                 diagnosis=f"Diagnosis {i}",
                 confidence=0.90 + (i * 0.01),
@@ -137,6 +138,11 @@ class UploadImageTestCase(TestCase):
             'gender': 'M',
             'mrn': 'TEST001'
         }, format='multipart')
+        
+        # Debug if fails
+        if response.status_code != status.HTTP_201_CREATED:
+            print(f"Upload failed: {response.status_code}")
+            print(f"Response: {response.json()}")
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         data = response.json()

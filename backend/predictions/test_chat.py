@@ -176,7 +176,8 @@ class ChatRoomAPITestCase(TestCase):
     def test_send_message(self):
         """Test sending a message."""
         data = {
-            'content': 'Hello from test!'
+            'content': 'Hello from test!',
+            'room': str(self.room.id)  # Add room field
         }
         
         response = self.client.post(
@@ -184,6 +185,10 @@ class ChatRoomAPITestCase(TestCase):
             data,
             format='json'  # Important: use JSON format
         )
+        
+        # Debug if fails
+        if response.status_code != status.HTTP_201_CREATED:
+            print(f"Response: {response.status_code}, Data: {response.json()}")
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()['content'], 'Hello from test!')
