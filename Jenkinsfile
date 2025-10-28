@@ -66,6 +66,11 @@ pipeline {
               if [ "${DEPLOY_MONITORING}" = "true" ]; then
                 echo "🔍 Deploying monitoring stack..."
                 
+                # Stop and remove ALL monitoring containers first
+                echo "Stopping existing monitoring containers..."
+                docker-compose -f ${COMPOSE_FILE} -f ${MONITORING_COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} stop prometheus grafana node-exporter cadvisor postgres-exporter redis-exporter 2>/dev/null || true
+                docker rm -f medml_prometheus medml_grafana medml_node_exporter medml_cadvisor medml_postgres_exporter medml_redis_exporter 2>/dev/null || true
+                
                 # Fix prometheus.yml if it's a directory
                 echo "Checking prometheus/prometheus.yml..."
                 if [ -d "prometheus/prometheus.yml" ]; then
@@ -76,26 +81,24 @@ pipeline {
                 # Force checkout from git
                 echo "Fetching latest prometheus.yml from git..."
                 git fetch origin
-                git checkout origin/main -- prometheus/prometheus.yml || echo "Git checkout failed, continuing..."
+                git checkout origin/main -- prometheus/prometheus.yml || git show origin/main:prometheus/prometheus.yml > prometheus/prometheus.yml
                 
                 # Verify prometheus.yml is a file
                 if [ -f "prometheus/prometheus.yml" ]; then
-                  echo "✅ prometheus.yml is a file ($(stat -f%z prometheus/prometheus.yml 2>/dev/null || stat -c%s prometheus/prometheus.yml) bytes)"
+                  echo "✅ prometheus.yml is a file ($(stat -c%s prometheus/prometheus.yml 2>/dev/null || stat -f%z prometheus/prometheus.yml 2>/dev/null || echo 'unknown') bytes)"
                   head -3 prometheus/prometheus.yml
                 else
                   echo "❌ ERROR: prometheus/prometheus.yml is not a file!"
                   ls -la prometheus/ || true
-                  echo "Attempting to create from template..."
-                  # Last resort: check if file exists in git
-                  git show origin/main:prometheus/prometheus.yml > prometheus/prometheus.yml || exit 1
+                  exit 1
                 fi
                 
-                # Remove old Prometheus container to avoid mount issues
-                echo "Removing old Prometheus container..."
-                docker rm -f medml_prometheus 2>/dev/null || true
+                # Wait a bit for containers to fully stop
+                sleep 3
                 
-                # Deploy monitoring
-                docker-compose $ENV_ARG -f ${COMPOSE_FILE} -f ${MONITORING_COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d --scale jenkins=0
+                # Deploy monitoring with --force-recreate
+                echo "Deploying monitoring stack (force recreate)..."
+                docker-compose $ENV_ARG -f ${COMPOSE_FILE} -f ${MONITORING_COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d --force-recreate --scale jenkins=0 prometheus grafana node-exporter cadvisor postgres-exporter redis-exporter
                 echo "✅ Monitoring stack deployed"
               else
                 echo "⏭️  Skipping monitoring stack (DEPLOY_MONITORING=${DEPLOY_MONITORING})"
