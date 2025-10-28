@@ -149,4 +149,5 @@ volumes:
 
 networks:
   medml_network:
+    name: ${COMPOSE_PROJECT_NAME:-medml}_medml_network
     external: true
