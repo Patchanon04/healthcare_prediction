@@ -28,7 +28,35 @@ pipeline {
       }
     }
 
-    
+    stage('Fix Prometheus Config') {
+      steps {
+        dir(env.WORKDIR) {
+          sh '''
+            echo "🔧 Fixing Prometheus configuration..."
+            
+            # Check if prometheus.yml is a directory (wrong)
+            if [ -d "prometheus/prometheus.yml" ]; then
+              echo "⚠️  prometheus.yml is a directory! Removing..."
+              rm -rf prometheus/prometheus.yml
+            fi
+            
+            # Force pull latest files
+            git fetch --all
+            git checkout origin/main -- prometheus/prometheus.yml
+            
+            # Verify it's a file now
+            if [ -f "prometheus/prometheus.yml" ]; then
+              echo "✅ prometheus.yml is now a file"
+              ls -lh prometheus/prometheus.yml
+              head -5 prometheus/prometheus.yml
+            else
+              echo "❌ ERROR: prometheus.yml still not a file!"
+              exit 1
+            fi
+          '''
+        }
+      }
+    }
 
     stage('Build & Deploy') {
       steps {
