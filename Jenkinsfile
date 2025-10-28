@@ -67,21 +67,34 @@ pipeline {
                 echo "🔍 Deploying monitoring stack..."
                 
                 # Fix prometheus.yml if it's a directory
+                echo "Checking prometheus/prometheus.yml..."
                 if [ -d "prometheus/prometheus.yml" ]; then
-                  echo "⚠️  prometheus.yml is a directory! Fixing..."
+                  echo "⚠️  prometheus.yml is a directory! Removing..."
                   rm -rf prometheus/prometheus.yml
-                  git checkout origin/main -- prometheus/prometheus.yml
                 fi
+                
+                # Force checkout from git
+                echo "Fetching latest prometheus.yml from git..."
+                git fetch origin
+                git checkout origin/main -- prometheus/prometheus.yml || echo "Git checkout failed, continuing..."
                 
                 # Verify prometheus.yml is a file
-                if [ ! -f "prometheus/prometheus.yml" ]; then
+                if [ -f "prometheus/prometheus.yml" ]; then
+                  echo "✅ prometheus.yml is a file ($(stat -f%z prometheus/prometheus.yml 2>/dev/null || stat -c%s prometheus/prometheus.yml) bytes)"
+                  head -3 prometheus/prometheus.yml
+                else
                   echo "❌ ERROR: prometheus/prometheus.yml is not a file!"
-                  ls -la prometheus/
-                  exit 1
+                  ls -la prometheus/ || true
+                  echo "Attempting to create from template..."
+                  # Last resort: check if file exists in git
+                  git show origin/main:prometheus/prometheus.yml > prometheus/prometheus.yml || exit 1
                 fi
                 
-                echo "✅ prometheus.yml verified as file"
+                # Remove old Prometheus container to avoid mount issues
+                echo "Removing old Prometheus container..."
+                docker rm -f medml_prometheus 2>/dev/null || true
                 
+                # Deploy monitoring
                 docker-compose $ENV_ARG -f ${COMPOSE_FILE} -f ${MONITORING_COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d --scale jenkins=0
                 echo "✅ Monitoring stack deployed"
               else
