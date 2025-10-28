@@ -15,7 +15,8 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.enable-lifecycle'
     volumes:
-      - ${PWD}/prometheus:/etc/prometheus:ro
+      - ${PWD}/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${PWD}/prometheus/alerts:/etc/prometheus/alerts:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
