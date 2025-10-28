@@ -98,7 +98,7 @@ pipeline {
                 
                 # Deploy monitoring with --force-recreate
                 echo "Deploying monitoring stack (force recreate)..."
-                docker-compose $ENV_ARG -f ${COMPOSE_FILE} -f ${MONITORING_COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d --force-recreate --scale jenkins=0 prometheus grafana node-exporter cadvisor postgres-exporter redis-exporter
+                docker-compose $ENV_ARG -f ${COMPOSE_FILE} -f ${MONITORING_COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d --force-recreate prometheus grafana node-exporter cadvisor postgres-exporter redis-exporter
                 echo "✅ Monitoring stack deployed"
               else
                 echo "⏭️  Skipping monitoring stack (DEPLOY_MONITORING=${DEPLOY_MONITORING})"
