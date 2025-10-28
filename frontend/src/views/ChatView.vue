@@ -265,13 +265,6 @@ export default {
     const fetchMessages = async (roomId) => {
       try {
         loadingMessages.value = true
-        
-        // Ensure currentUserId is loaded
-        if (!currentUserId.value) {
-          console.warn('⚠️ Current user ID not loaded, loading now...')
-          await loadCurrentUser()
-        }
-        
         const data = await listMessages(roomId, { pageSize: 100 })
         
         // Log current user for debugging
@@ -315,16 +308,6 @@ export default {
 
     const createRoom = async () => {
       if (selectedUserIds.value.length === 0) return
-      
-      // Ensure currentUserId is loaded
-      if (!currentUserId.value) {
-        console.error('❌ Current user ID not loaded yet!')
-        await loadCurrentUser()
-        if (!currentUserId.value) {
-          showError('Unable to identify current user. Please refresh the page.')
-          return
-        }
-      }
       
       try {
         const roomType = selectedUserIds.value.length === 1 ? 'direct' : 'group'
@@ -558,41 +541,26 @@ export default {
           const user = JSON.parse(userStr)
           currentUserId.value = user.id
           currentUsername.value = user.username || null
-          console.log('🔑 Loaded user from localStorage:', currentUserId.value)
-          return
+        } else {
+          // Fallback: fetch from API
+          const token = localStorage.getItem('token')
+          if (token) {
+            try {
+              const profile = await getProfile()
+              currentUserId.value = profile.id || profile.user?.id
+              currentUsername.value = profile.username || profile.user?.username
+              // Cache for future
+              localStorage.setItem('user', JSON.stringify({ id: currentUserId.value, username: currentUsername.value }))
+            } catch (e) {
+              console.error('Failed to fetch user profile:', e)
+            }
+          }
         }
-        
-        // Fallback: fetch from API
-        const token = localStorage.getItem('token')
-        if (!token) {
-          console.error('❌ No token found in localStorage')
-          throw new Error('No authentication token found')
-        }
-        
-        console.log('📡 Fetching user profile from API...')
-        const profile = await getProfile()
-        
-        if (!profile || (!profile.id && !profile.user?.id)) {
-          console.error('❌ Invalid profile response:', profile)
-          throw new Error('Invalid profile data')
-        }
-        
-        currentUserId.value = profile.id || profile.user?.id
-        currentUsername.value = profile.username || profile.user?.username
-        
-        // Cache for future
-        localStorage.setItem('user', JSON.stringify({ 
-          id: currentUserId.value, 
-          username: currentUsername.value 
-        }))
-        
-        console.log('✅ Loaded user from API:', currentUserId.value)
       } catch (e) {
-        console.error('❌ Failed to load current user:', e)
-        currentUserId.value = null
-        currentUsername.value = null
-        throw e
+        console.error('Failed to parse user from localStorage:', e)
       }
+      
+      console.log('🔑 Current User ID:', currentUserId.value, 'Username:', currentUsername.value)
     }
 
     // Handle user change event (dispatched from login/logout)
