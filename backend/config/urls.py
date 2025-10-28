@@ -9,6 +9,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('predictions.urls')),
+    path('metrics', include('django_prometheus.urls')),
 ]
 
 # Serve media files in development/local storage mode

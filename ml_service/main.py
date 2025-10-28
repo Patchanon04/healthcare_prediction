@@ -12,6 +12,9 @@ import cv2
 from io import BytesIO
 from PIL import Image
 from dotenv import load_dotenv
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_fastapi_instrumentator import Instrumentator
+from fastapi.responses import Response
 
 # Load environment variables from parent directory's .env file
 parent_dir = Path(__file__).parent.parent
@@ -34,6 +37,36 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Brain Tumor Detection ML Service", version="2.0.0")
+
+# Prometheus metrics
+prediction_counter = Counter(
+    'ml_predictions_total',
+    'Total number of predictions made',
+    ['model', 'result']
+)
+prediction_duration = Histogram(
+    'ml_prediction_duration_seconds',
+    'Time spent processing prediction',
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+)
+prediction_errors = Counter(
+    'ml_prediction_errors_total',
+    'Total number of prediction errors',
+    ['error_type']
+)
+models_loaded_gauge = Gauge(
+    'ml_models_loaded',
+    'Number of ML models currently loaded'
+)
+model_confidence = Histogram(
+    'ml_model_confidence',
+    'Confidence scores of predictions',
+    ['model'],
+    buckets=[0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.0]
+)
+
+# Initialize Prometheus instrumentator
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 # CORS configuration
 app.add_middleware(
@@ -120,9 +153,13 @@ async def startup_event():
         
         logger.info("All models loaded successfully!")
         
+        # Update Prometheus gauge
+        models_loaded_gauge.set(2)
+        
     except Exception as e:
         logger.error(f"Error loading models: {e}")
         logger.warning("Service will start but predictions may fail")
+        models_loaded_gauge.set(0)
 
 
 @app.get("/health/", response_model=HealthResponse)
@@ -194,6 +231,14 @@ async def predict_brain_tumor(file: UploadFile = File(...)):
         
         processing_time = round(time.time() - start_time, 2)
         
+        # Record Prometheus metrics
+        prediction_duration.observe(processing_time)
+        prediction_counter.labels(
+            model=result["selected_model"],
+            result="tumor" if result["has_tumor"] else "no_tumor"
+        ).inc()
+        model_confidence.labels(model=result["selected_model"]).observe(result["confidence"])
+        
         return BrainTumorPredictionResponse(
             diagnosis=result["diagnosis"],
             has_tumor=result["has_tumor"],
@@ -210,6 +255,7 @@ async def predict_brain_tumor(file: UploadFile = File(...)):
         raise
     except Exception as e:
         logger.error(f"Prediction error: {e}")
+        prediction_errors.labels(error_type=type(e).__name__).inc()
         raise HTTPException(
             status_code=500,
             detail=f"Prediction error: {str(e)}"
@@ -262,6 +308,14 @@ async def predict_brain_tumor_url(request: PredictionRequest):
         
         processing_time = round(time.time() - start_time, 2)
         
+        # Record Prometheus metrics
+        prediction_duration.observe(processing_time)
+        prediction_counter.labels(
+            model=result["selected_model"],
+            result="tumor" if result["has_tumor"] else "no_tumor"
+        ).inc()
+        model_confidence.labels(model=result["selected_model"]).observe(result["confidence"])
+        
         return BrainTumorPredictionResponse(
             diagnosis=result["diagnosis"],
             has_tumor=result["has_tumor"],
@@ -278,6 +332,7 @@ async def predict_brain_tumor_url(request: PredictionRequest):
         raise
     except Exception as e:
         logger.error(f"Prediction error: {e}")
+        prediction_errors.labels(error_type=type(e).__name__).inc()
         raise HTTPException(
             status_code=500,
             detail=f"Prediction error: {str(e)}"

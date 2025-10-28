@@ -6,12 +6,15 @@ pipeline {
   }
   environment {
     COMPOSE_FILE = 'docker-compose.prod.yml'
+    MONITORING_COMPOSE_FILE = 'docker-compose.monitoring.yml'
     // โฟลเดอร์ทำงานของ pipeline (root ของ repo)
     WORKDIR = '.'
     // ใช้ชื่อโปรเจกต์คงที่เพื่อให้ down/up กระทบ stack เดียวกันเสมอ
     COMPOSE_PROJECT_NAME = 'medml'
     // ชี้ไปยังไฟล์ .env ภายใน Jenkins container
     ENV_FILE = '/var/jenkins_home/.env'
+    // Enable/Disable monitoring stack
+    DEPLOY_MONITORING = 'true'
   }
   stages {
     stage('Checkout') {
@@ -60,6 +63,15 @@ pipeline {
 
               # Start/update services (exclude Jenkins to avoid self-conflict)
               docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d --scale jenkins=0
+              
+              # Deploy monitoring stack if enabled
+              if [ "${DEPLOY_MONITORING}" = "true" ]; then
+                echo "🔍 Deploying monitoring stack..."
+                docker-compose $ENV_ARG -f ${COMPOSE_FILE} -f ${MONITORING_COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d --scale jenkins=0
+                echo "✅ Monitoring stack deployed"
+              else
+                echo "⏭️  Skipping monitoring stack (DEPLOY_MONITORING=${DEPLOY_MONITORING})"
+              fi
             '''
           }
         }
@@ -221,10 +233,69 @@ pipeline {
         }
       }
     }
+
+    stage('Monitoring Health Checks') {
+      when {
+        expression { env.DEPLOY_MONITORING == 'true' }
+      }
+      steps {
+        dir(env.WORKDIR) {
+          sh '''
+            set -e
+            echo "🔍 Checking monitoring services..."
+            sleep 5
+            
+            echo "Checking Prometheus..."
+            PROMETHEUS_HEALTHY=false
+            for i in 1 2 3 4 5; do
+              if curl -fsS http://localhost:9090/-/healthy > /dev/null 2>&1; then
+                echo "✅ Prometheus healthy"
+                PROMETHEUS_HEALTHY=true
+                break
+              fi
+              echo "Prometheus not ready yet... ($i/5)"
+              sleep 3
+            done
+            
+            if [ "$PROMETHEUS_HEALTHY" = "false" ]; then
+              echo "⚠️  Prometheus health check failed, but continuing..."
+            fi
+            
+            echo "Checking Grafana..."
+            GRAFANA_HEALTHY=false
+            for i in 1 2 3 4 5; do
+              if curl -fsS http://localhost:3000/api/health > /dev/null 2>&1; then
+                echo "✅ Grafana healthy"
+                GRAFANA_HEALTHY=true
+                break
+              fi
+              echo "Grafana not ready yet... ($i/5)"
+              sleep 3
+            done
+            
+            if [ "$GRAFANA_HEALTHY" = "false" ]; then
+              echo "⚠️  Grafana health check failed, but continuing..."
+            fi
+            
+            echo "✅ Monitoring health checks completed"
+            echo "📊 Access Grafana at: http://localhost:3000"
+            echo "📈 Access Prometheus at: http://localhost:9090"
+          '''
+        }
+      }
+    }
   }
   post {
     success {
       echo '✅ Deploy successful on main'
+      script {
+        if (env.DEPLOY_MONITORING == 'true') {
+          echo '📊 Monitoring stack is running:'
+          echo '   - Grafana: http://localhost:3000 (admin/admin)'
+          echo '   - Prometheus: http://localhost:9090'
+          echo '   - cAdvisor: http://localhost:8082'
+        }
+      }
     }
     failure {
       echo '❌ Build/Deploy failed. Check logs.'

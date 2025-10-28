@@ -1,0 +1,135 @@
+groups:
+  - name: service_health
+    interval: 30s
+    rules:
+      # Service Down Alerts
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute."
+
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.job }}"
+          description: "{{ $labels.job }} CPU usage is above 80% for 5 minutes."
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 / 1024 > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.job }}"
+          description: "{{ $labels.job }} is using more than 2GB of memory."
+
+  - name: ml_service_alerts
+    interval: 30s
+    rules:
+      # ML Service High Latency
+      - alert: MLServiceHighLatency
+        expr: histogram_quantile(0.95, rate(ml_prediction_duration_seconds_bucket[5m])) > 5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ML Service has high prediction latency"
+          description: "95th percentile prediction time is above 5 seconds for 3 minutes."
+
+      # ML Service High Error Rate
+      - alert: MLServiceHighErrorRate
+        expr: rate(ml_prediction_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ML Service has high error rate"
+          description: "ML Service error rate is above 10% for 2 minutes."
+
+      # Models Not Loaded
+      - alert: MLModelsNotLoaded
+        expr: ml_models_loaded < 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ML models are not loaded"
+          description: "Expected 2 models but only {{ $value }} are loaded."
+
+  - name: backend_alerts
+    interval: 30s
+    rules:
+      # Backend High Error Rate
+      - alert: BackendHighErrorRate
+        expr: rate(django_http_responses_total_by_status_total{status=~"5.."}[5m]) / rate(django_http_responses_total_by_status_total[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend has high 5xx error rate"
+          description: "Backend 5xx error rate is above 5% for 3 minutes."
+
+      # Backend High Response Time
+      - alert: BackendHighResponseTime
+        expr: histogram_quantile(0.95, rate(django_http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backend has high response time"
+          description: "95th percentile response time is above 2 seconds."
+
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # PostgreSQL Down
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database has been down for more than 1 minute."
+
+      # High Database Connections
+      - alert: HighDatabaseConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connection usage"
+          description: "Database connection usage is above 80%."
+
+  - name: container_alerts
+    interval: 30s
+    rules:
+      # Container High Memory Usage
+      - alert: ContainerHighMemory
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high memory usage"
+          description: "Container is using more than 90% of its memory limit."
+
+      # Container Restart
+      - alert: ContainerRestart
+        expr: rate(container_last_seen[5m]) > 2
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} is restarting frequently"
+          description: "Container has restarted more than 2 times in 5 minutes."
