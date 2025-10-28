@@ -633,6 +633,35 @@ class ChatRoomListCreateView(generics.ListCreateAPIView):
         """Return rooms where user is a member."""
         return ChatRoom.objects.filter(members=self.request.user).prefetch_related('members', 'messages')
     
+    def create(self, request, *args, **kwargs):
+        """Create room or return existing direct chat."""
+        room_type = request.data.get('room_type', 'group')
+        member_ids = request.data.get('member_ids', [])
+        
+        # Check for existing direct chat
+        if room_type == 'direct' and len(member_ids) == 1:
+            target_user_id = member_ids[0]
+            
+            # Find existing direct chat between current user and target user
+            existing_room = ChatRoom.objects.filter(
+                room_type='direct',
+                members=request.user
+            ).filter(
+                members__id=target_user_id
+            ).annotate(
+                member_count=Count('members')
+            ).filter(
+                member_count=2
+            ).first()
+            
+            if existing_room:
+                logger.info(f"Direct chat already exists: {existing_room.id}")
+                serializer = self.get_serializer(existing_room)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        # Create new room if not exists
+        return super().create(request, *args, **kwargs)
+    
     def perform_create(self, serializer):
         """Create room and add current user as member."""
         serializer.save()
