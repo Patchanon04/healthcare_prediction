@@ -265,6 +265,13 @@ export default {
     const fetchMessages = async (roomId) => {
       try {
         loadingMessages.value = true
+        
+        // Ensure currentUserId is loaded
+        if (!currentUserId.value) {
+          console.warn('⚠️ Current user ID not loaded, loading now...')
+          await loadCurrentUser()
+        }
+        
         const data = await listMessages(roomId, { pageSize: 100 })
         
         // Log current user for debugging
