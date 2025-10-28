@@ -243,9 +243,33 @@ pipeline {
           sh '''
             set -e
             echo "🔍 Checking monitoring services..."
-            sleep 5
             
-            echo "Checking Prometheus..."
+            # Check if containers are running
+            echo "Checking containers..."
+            docker ps | grep -E "prometheus|grafana|node_exporter|cadvisor" || echo "Some monitoring containers not found"
+            
+            # Check Prometheus logs for errors
+            echo ""
+            echo "📋 Prometheus logs (last 10 lines):"
+            docker logs medml_prometheus --tail 10 || echo "Cannot read Prometheus logs"
+            
+            # Check if Prometheus has IP
+            echo ""
+            echo "🔍 Checking Prometheus network..."
+            PROM_IP=$(docker inspect medml_prometheus --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
+            if [ -z "$PROM_IP" ]; then
+              echo "⚠️  WARNING: Prometheus has no IP address!"
+              docker inspect medml_prometheus | grep -A 5 "State" || true
+            else
+              echo "✅ Prometheus IP: $PROM_IP"
+            fi
+            
+            # Wait for services
+            sleep 10
+            
+            # Check Prometheus health
+            echo ""
+            echo "Checking Prometheus health..."
             PROMETHEUS_HEALTHY=false
             for i in 1 2 3 4 5; do
               if curl -fsS http://localhost:9090/-/healthy > /dev/null 2>&1; then
@@ -254,14 +278,19 @@ pipeline {
                 break
               fi
               echo "Prometheus not ready yet... ($i/5)"
-              sleep 3
+              sleep 5
             done
             
             if [ "$PROMETHEUS_HEALTHY" = "false" ]; then
-              echo "⚠️  Prometheus health check failed, but continuing..."
+              echo "❌ Prometheus health check failed!"
+              echo "Checking Prometheus status..."
+              docker ps -a | grep prometheus || true
+              docker logs medml_prometheus --tail 20 || true
             fi
             
-            echo "Checking Grafana..."
+            # Check Grafana health
+            echo ""
+            echo "Checking Grafana health..."
             GRAFANA_HEALTHY=false
             for i in 1 2 3 4 5; do
               if curl -fsS http://localhost:3000/api/health > /dev/null 2>&1; then
@@ -277,6 +306,14 @@ pipeline {
               echo "⚠️  Grafana health check failed, but continuing..."
             fi
             
+            # Test Grafana -> Prometheus connection
+            if [ "$PROMETHEUS_HEALTHY" = "true" ] && [ "$GRAFANA_HEALTHY" = "true" ]; then
+              echo ""
+              echo "🔗 Testing Grafana -> Prometheus connection..."
+              docker exec medml_grafana wget -O- http://prometheus:9090/-/healthy 2>&1 | head -5 || echo "Connection test failed"
+            fi
+            
+            echo ""
             echo "✅ Monitoring health checks completed"
             echo "📊 Access Grafana at: http://localhost:3000"
             echo "📈 Access Prometheus at: http://localhost:9090"
