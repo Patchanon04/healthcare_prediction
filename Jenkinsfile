@@ -6,15 +6,12 @@ pipeline {
   }
   environment {
     COMPOSE_FILE = 'docker-compose.prod.yml'
-    MONITORING_COMPOSE_FILE = 'docker-compose.monitoring.yml'
     // โฟลเดอร์ทำงานของ pipeline (root ของ repo)
     WORKDIR = '.'
     // ใช้ชื่อโปรเจกต์คงที่เพื่อให้ down/up กระทบ stack เดียวกันเสมอ
     COMPOSE_PROJECT_NAME = 'medml'
     // ชี้ไปยังไฟล์ .env ภายใน Jenkins container
     ENV_FILE = '/var/jenkins_home/.env'
-    // Enable/Disable monitoring stack
-    DEPLOY_MONITORING = 'true'
   }
   stages {
     stage('Checkout') {
@@ -27,6 +24,8 @@ pipeline {
         }
       }
     }
+
+    
 
     stage('Build & Deploy') {
       steps {
@@ -61,48 +60,6 @@ pipeline {
 
               # Start/update services (exclude Jenkins to avoid self-conflict)
               docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d --scale jenkins=0
-              
-              # Deploy monitoring stack if enabled
-              if [ "${DEPLOY_MONITORING}" = "true" ]; then
-                echo "🔍 Deploying monitoring stack..."
-                
-                # Stop and remove ALL monitoring containers first
-                echo "Stopping existing monitoring containers..."
-                docker-compose -f ${COMPOSE_FILE} -f ${MONITORING_COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} stop prometheus grafana node-exporter cadvisor postgres-exporter redis-exporter 2>/dev/null || true
-                docker rm -f medml_prometheus medml_grafana medml_node_exporter medml_cadvisor medml_postgres_exporter medml_redis_exporter 2>/dev/null || true
-                
-                # Fix prometheus.yml if it's a directory
-                echo "Checking prometheus/prometheus.yml..."
-                if [ -d "prometheus/prometheus.yml" ]; then
-                  echo "⚠️  prometheus.yml is a directory! Removing..."
-                  rm -rf prometheus/prometheus.yml
-                fi
-                
-                # Force checkout from git
-                echo "Fetching latest prometheus.yml from git..."
-                git fetch origin
-                git checkout origin/main -- prometheus/prometheus.yml || git show origin/main:prometheus/prometheus.yml > prometheus/prometheus.yml
-                
-                # Verify prometheus.yml is a file
-                if [ -f "prometheus/prometheus.yml" ]; then
-                  echo "✅ prometheus.yml is a file ($(stat -c%s prometheus/prometheus.yml 2>/dev/null || stat -f%z prometheus/prometheus.yml 2>/dev/null || echo 'unknown') bytes)"
-                  head -3 prometheus/prometheus.yml
-                else
-                  echo "❌ ERROR: prometheus/prometheus.yml is not a file!"
-                  ls -la prometheus/ || true
-                  exit 1
-                fi
-                
-                # Wait a bit for containers to fully stop
-                sleep 3
-                
-                # Deploy monitoring with --force-recreate
-                echo "Deploying monitoring stack (force recreate)..."
-                docker-compose $ENV_ARG -f ${COMPOSE_FILE} -f ${MONITORING_COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} up -d --force-recreate prometheus grafana node-exporter cadvisor postgres-exporter redis-exporter
-                echo "✅ Monitoring stack deployed"
-              else
-                echo "⏭️  Skipping monitoring stack (DEPLOY_MONITORING=${DEPLOY_MONITORING})"
-              fi
             '''
           }
         }
@@ -264,106 +221,10 @@ pipeline {
         }
       }
     }
-
-    stage('Monitoring Health Checks') {
-      when {
-        expression { env.DEPLOY_MONITORING == 'true' }
-      }
-      steps {
-        dir(env.WORKDIR) {
-          sh '''
-            set -e
-            echo "🔍 Checking monitoring services..."
-            
-            # Check if containers are running
-            echo "Checking containers..."
-            docker ps | grep -E "prometheus|grafana|node_exporter|cadvisor" || echo "Some monitoring containers not found"
-            
-            # Check Prometheus logs for errors
-            echo ""
-            echo "📋 Prometheus logs (last 10 lines):"
-            docker logs medml_prometheus --tail 10 || echo "Cannot read Prometheus logs"
-            
-            # Check if Prometheus has IP
-            echo ""
-            echo "🔍 Checking Prometheus network..."
-            PROM_IP=$(docker inspect medml_prometheus --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "")
-            if [ -z "$PROM_IP" ]; then
-              echo "⚠️  WARNING: Prometheus has no IP address!"
-              docker inspect medml_prometheus | grep -A 5 "State" || true
-            else
-              echo "✅ Prometheus IP: $PROM_IP"
-            fi
-            
-            # Wait for services
-            sleep 10
-            
-            # Check Prometheus health
-            echo ""
-            echo "Checking Prometheus health..."
-            PROMETHEUS_HEALTHY=false
-            for i in 1 2 3 4 5; do
-              if curl -fsS http://localhost:9090/-/healthy > /dev/null 2>&1; then
-                echo "✅ Prometheus healthy"
-                PROMETHEUS_HEALTHY=true
-                break
-              fi
-              echo "Prometheus not ready yet... ($i/5)"
-              sleep 5
-            done
-            
-            if [ "$PROMETHEUS_HEALTHY" = "false" ]; then
-              echo "❌ Prometheus health check failed!"
-              echo "Checking Prometheus status..."
-              docker ps -a | grep prometheus || true
-              docker logs medml_prometheus --tail 20 || true
-            fi
-            
-            # Check Grafana health
-            echo ""
-            echo "Checking Grafana health..."
-            GRAFANA_HEALTHY=false
-            for i in 1 2 3 4 5; do
-              if curl -fsS http://localhost:3000/api/health > /dev/null 2>&1; then
-                echo "✅ Grafana healthy"
-                GRAFANA_HEALTHY=true
-                break
-              fi
-              echo "Grafana not ready yet... ($i/5)"
-              sleep 3
-            done
-            
-            if [ "$GRAFANA_HEALTHY" = "false" ]; then
-              echo "⚠️  Grafana health check failed, but continuing..."
-            fi
-            
-            # Test Grafana -> Prometheus connection
-            if [ "$PROMETHEUS_HEALTHY" = "true" ] && [ "$GRAFANA_HEALTHY" = "true" ]; then
-              echo ""
-              echo "🔗 Testing Grafana -> Prometheus connection..."
-              docker exec medml_grafana wget -O- http://prometheus:9090/-/healthy 2>&1 | head -5 || echo "Connection test failed"
-            fi
-            
-            echo ""
-            echo "✅ Monitoring health checks completed"
-            echo "📊 Access Grafana at: http://localhost:3000"
-            echo "📈 Access Prometheus at: http://localhost:9090"
-          '''
-        }
-      }
-    }
   }
   post {
     success {
       echo '✅ Deploy successful on main'
-      script {
-        if (env.DEPLOY_MONITORING == 'true') {
-          echo '📊 Monitoring stack is running:'
-          echo '   - Grafana: http://localhost:3000 (admin/admin)'
-          echo '   - Prometheus: http://localhost:9090'
-          echo '   - cAdvisor: http://localhost:8082'
-        }
-      }
     }
     failure {
       echo '❌ Build/Deploy failed. Check logs.'
