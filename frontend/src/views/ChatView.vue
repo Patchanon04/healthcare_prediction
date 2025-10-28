@@ -266,15 +266,24 @@ export default {
       try {
         loadingMessages.value = true
         const data = await listMessages(roomId, { pageSize: 100 })
-        messages.value = (data.results || []).map(m => ({
-          ...m,
-          status: m.is_read ? 'read' : (isSelf(m) ? 'delivered' : undefined),
-        }))
+        
+        // Log current user for debugging
+        console.log('📥 Fetching messages. Current User ID:', currentUserId.value)
+        
+        messages.value = (data.results || []).map(m => {
+          const isSelfMsg = isSelf(m)
+          console.log(`Message ${m.id}: sender=${m.sender?.id}, isSelf=${isSelfMsg}`)
+          return {
+            ...m,
+            status: m.is_read ? 'read' : (isSelfMsg ? 'delivered' : undefined),
+          }
+        })
+        
         await nextTick()
         scrollToBottom()
         
         // Mark as read
-        const unreadIds = messages.value.filter(m => !m.is_read && m.sender.id !== currentUserId.value).map(m => m.id)
+        const unreadIds = messages.value.filter(m => !m.is_read && String(m.sender.id) !== String(currentUserId.value)).map(m => m.id)
         if (unreadIds.length > 0) {
           await markMessagesRead(roomId, unreadIds)
           // Locally clear unread badge for this room
@@ -321,12 +330,19 @@ export default {
             if (room.room_type !== 'direct') return false
             
             // Check if members match (current user + target user)
-            const memberIds = room.members.map(m => m.id)
-            const hasTarget = memberIds.includes(targetUserId)
-            const hasCurrent = memberIds.includes(currentUserId.value)
+            const memberIds = room.members.map(m => String(m.id))
+            const hasTarget = memberIds.includes(String(targetUserId))
+            const hasCurrent = memberIds.includes(String(currentUserId.value))
             const isTwo = memberIds.length === 2
             
-            console.log(`Room ${room.id}:`, { hasTarget, hasCurrent, isTwo, memberIds })
+            console.log(`Room ${room.id}:`, { 
+              hasTarget, 
+              hasCurrent, 
+              isTwo, 
+              memberIds,
+              targetUserId: String(targetUserId),
+              currentUserId: String(currentUserId.value)
+            })
             
             return hasTarget && hasCurrent && isTwo
           })
