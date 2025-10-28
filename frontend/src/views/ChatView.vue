@@ -312,52 +312,59 @@ export default {
       try {
         const roomType = selectedUserIds.value.length === 1 ? 'direct' : 'group'
         
-        // Check if direct chat with this user already exists
-        if (roomType === 'direct') {
-          const targetUserId = selectedUserIds.value[0]
+        console.log('🔍 Checking for existing chat...')
+        console.log('Room Type:', roomType)
+        console.log('Selected User IDs:', selectedUserIds.value)
+        console.log('Current User ID:', currentUserId.value)
+        
+        // Check if chat with these exact members already exists
+        const selectedIdsSet = new Set([...selectedUserIds.value.map(String), String(currentUserId.value)])
+        
+        console.log('Looking for room with members:', Array.from(selectedIdsSet))
+        console.log('All rooms:', rooms.value.map(r => ({
+          id: r.id,
+          type: r.room_type,
+          members: r.members.map(m => ({ id: m.id, name: m.full_name || m.username }))
+        })))
+        
+        const existingRoom = rooms.value.find(room => {
+          // For direct chat: must be type 'direct' and have exactly 2 members
+          if (roomType === 'direct' && room.room_type !== 'direct') return false
           
-          console.log('🔍 Checking for existing direct chat...')
-          console.log('Target User ID:', targetUserId)
-          console.log('Current User ID:', currentUserId.value)
-          console.log('All rooms:', rooms.value.map(r => ({
-            id: r.id,
-            type: r.room_type,
-            members: r.members.map(m => ({ id: m.id, name: m.full_name || m.username }))
-          })))
+          // For group chat: can be any type, but check member match
+          const roomMemberIds = new Set(room.members.map(m => String(m.id)))
           
-          const existingRoom = rooms.value.find(room => {
-            // Check if it's a direct chat
-            if (room.room_type !== 'direct') return false
-            
-            // Check if members match (current user + target user)
-            const memberIds = room.members.map(m => String(m.id))
-            const hasTarget = memberIds.includes(String(targetUserId))
-            const hasCurrent = memberIds.includes(String(currentUserId.value))
-            const isTwo = memberIds.length === 2
-            
-            console.log(`Room ${room.id}:`, { 
-              hasTarget, 
-              hasCurrent, 
-              isTwo, 
-              memberIds,
-              targetUserId: String(targetUserId),
-              currentUserId: String(currentUserId.value)
-            })
-            
-            return hasTarget && hasCurrent && isTwo
+          // Check if sets are equal (same members)
+          if (roomMemberIds.size !== selectedIdsSet.size) return false
+          
+          const hasAllMembers = Array.from(selectedIdsSet).every(id => roomMemberIds.has(id))
+          
+          console.log(`Room ${room.id}:`, {
+            type: room.room_type,
+            roomMembers: Array.from(roomMemberIds),
+            selectedMembers: Array.from(selectedIdsSet),
+            hasAllMembers,
+            sizeMatch: roomMemberIds.size === selectedIdsSet.size
           })
           
-          if (existingRoom) {
-            console.log('✅ Direct chat already exists, navigating to it:', existingRoom.id)
-            showNewChatModal.value = false
-            selectedUserIds.value = []
-            newRoomName.value = ''
-            selectRoom(existingRoom)
-            return
-          }
-          
-          console.log('❌ No existing direct chat found, creating new one')
+          return hasAllMembers
+        })
+        
+        if (existingRoom) {
+          console.log('✅ Chat already exists, navigating to it:', existingRoom.id)
+          showNewChatModal.value = false
+          selectedUserIds.value = []
+          newRoomName.value = ''
+          selectRoom(existingRoom)
+          return
         }
+        
+        console.log('❌ No existing chat found, creating new one')
+        console.log('Creating room with:', {
+          name: newRoomName.value || '',
+          room_type: roomType,
+          member_ids: selectedUserIds.value
+        })
         
         // Create new room if not exists
         const data = await createChatRoom({
@@ -365,6 +372,8 @@ export default {
           room_type: roomType,
           member_ids: selectedUserIds.value
         })
+        
+        console.log('✅ Room created:', data)
         
         rooms.value.unshift(data)
         showNewChatModal.value = false
