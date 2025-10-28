@@ -29,7 +29,7 @@ scrape_configs:
   # Node Exporter (Server metrics: CPU, RAM, Disk)
   - job_name: 'node-exporter'
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ['medml_node_exporter:9100']
         labels:
           service: 'node-exporter'
           instance: 'ec2-server'
@@ -37,28 +37,28 @@ scrape_configs:
   # cAdvisor (Container metrics)
   - job_name: 'cadvisor'
     static_configs:
-      - targets: ['cadvisor:8080']
+      - targets: ['medml_cadvisor:8080']
         labels:
           service: 'cadvisor'
 
   # PostgreSQL Exporter
   - job_name: 'postgres'
     static_configs:
-      - targets: ['postgres-exporter:9187']
+      - targets: ['medml_postgres_exporter:9187']
         labels:
           service: 'postgresql'
 
   # Redis Exporter
   - job_name: 'redis'
     static_configs:
-      - targets: ['redis-exporter:9121']
+      - targets: ['medml_redis_exporter:9121']
         labels:
           service: 'redis'
 
   # Backend (Django)
   - job_name: 'backend'
     static_configs:
-      - targets: ['backend:8000']
+      - targets: ['medml_backend:8000']
         labels:
           service: 'backend'
           app: 'django'
@@ -68,7 +68,7 @@ scrape_configs:
   # ML Service (FastAPI)
   - job_name: 'ml-service'
     static_configs:
-      - targets: ['ml_service:5000']
+      - targets: ['medml_ml_service:5000']
         labels:
           service: 'ml-service'
           app: 'fastapi'

@@ -20,7 +20,9 @@ services:
     ports:
       - "9090:9090"
     networks:
-      - medml_network
+      medml_network:
+        aliases:
+          - prometheus
     restart: always
     logging:
       driver: "json-file"
