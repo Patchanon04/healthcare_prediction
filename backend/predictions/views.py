@@ -634,32 +634,40 @@ class ChatRoomListCreateView(generics.ListCreateAPIView):
         return ChatRoom.objects.filter(members=self.request.user).prefetch_related('members', 'messages')
     
     def create(self, request, *args, **kwargs):
-        """Create room or return existing direct chat."""
+        """Create room or return existing chat with same members."""
         room_type = request.data.get('room_type', 'group')
         member_ids = request.data.get('member_ids', [])
         
-        # Check for existing direct chat
-        if room_type == 'direct' and len(member_ids) == 1:
-            target_user_id = member_ids[0]
-            
-            # Find existing direct chat between current user and target user
-            existing_room = ChatRoom.objects.filter(
-                room_type='direct',
-                members=request.user
-            ).filter(
-                members__id=target_user_id
-            ).annotate(
-                member_count=Count('members')
-            ).filter(
-                member_count=2
-            ).first()
-            
-            if existing_room:
-                logger.info(f"Direct chat already exists: {existing_room.id}")
-                serializer = self.get_serializer(existing_room)
+        # All members including current user
+        all_member_ids = set([request.user.id] + list(member_ids))
+        expected_count = len(all_member_ids)
+        
+        logger.info(f"Creating {room_type} chat with members: {all_member_ids}")
+        
+        # Find existing chat with exact same members
+        # Start with rooms that include current user
+        candidate_rooms = ChatRoom.objects.filter(
+            members=request.user
+        ).annotate(
+            member_count=Count('members')
+        ).filter(
+            member_count=expected_count
+        )
+        
+        # Check each candidate room for exact member match
+        for room in candidate_rooms:
+            room_member_ids = set(room.members.values_list('id', flat=True))
+            if room_member_ids == all_member_ids:
+                # For direct chat, also verify room_type
+                if room_type == 'direct' and room.room_type != 'direct':
+                    continue
+                
+                logger.info(f"Chat with same members already exists: {room.id}")
+                serializer = self.get_serializer(room)
                 return Response(serializer.data, status=status.HTTP_200_OK)
         
         # Create new room if not exists
+        logger.info(f"No existing chat found, creating new {room_type} room")
         return super().create(request, *args, **kwargs)
     
     def perform_create(self, serializer):
