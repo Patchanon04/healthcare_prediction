@@ -309,6 +309,16 @@ export default {
     const createRoom = async () => {
       if (selectedUserIds.value.length === 0) return
       
+      // Ensure currentUserId is loaded
+      if (!currentUserId.value) {
+        console.error('❌ Current user ID not loaded yet!')
+        await loadCurrentUser()
+        if (!currentUserId.value) {
+          showError('Unable to identify current user. Please refresh the page.')
+          return
+        }
+      }
+      
       try {
         const roomType = selectedUserIds.value.length === 1 ? 'direct' : 'group'
         
