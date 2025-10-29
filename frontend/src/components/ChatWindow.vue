@@ -53,44 +53,55 @@ export default {
     const typingTimeout = ref(null)
     const messagesEl = ref(null)
 
+    const normalizeId = (value) => {
+      if (value === null || value === undefined) return null
+      if (typeof value === 'object') {
+        if ('value' in value) return normalizeId(value.value)
+        if ('id' in value) return normalizeId(value.id)
+      }
+      return String(value)
+    }
+
+    const currentUserId = computed(() => {
+      const normalized = normalizeId(props.currentUserId)
+      if (!normalized) {
+        console.warn('⚠️ currentUserId not ready for room', props.room?.id, props.currentUserId)
+      }
+      return normalized
+    })
+
     const isSelf = (m) => {
-      if (!m || !m.sender) return false
-      const senderId = m.sender.id || m.sender
-      const currentId = props.currentUserId
-      console.log(`🔍 DEBUG: message=`, m, `senderId=${senderId}, currentId=${currentId}, types: ${typeof senderId}/${typeof currentId}`)
-      const result = String(senderId) === String(currentId)
-      console.log(`🔍 isSelf result: ${result}`)
+      if (!m) return false
+      const rawSender = m.sender?.id ?? m.sender
+      const senderId = normalizeId(rawSender)
+      const currentId = currentUserId.value
+      const result = senderId !== null && currentId !== null && senderId === currentId
+      if (!result) {
+        console.debug('🔍 message alignment check', { messageId: m.id, senderId, currentId, rawSender })
+      }
       return result
     }
 
     // Title: for direct chat show only counterpart name, for group fall back to room.name or members (excluding self)
     const roomTitle = computed(() => {
       const allMembers = props.room.members || []
-      const currentId = props.currentUserId
-      console.log(`🏷️ DEBUG: room=`, props.room, `currentUserId=${currentId}, type=${typeof currentId}`)
-      console.log(`🏷️ DEBUG: allMembers=`, allMembers)
-      
-      const others = allMembers.filter(m => {
-        const memberId = m.id
-        const match = String(memberId) !== String(currentId)
-        console.log(`🏷️ Member ${memberId} (${typeof memberId}) vs Current ${currentId} (${typeof currentId}) = keep: ${match}`)
-        return match
-      })
-      console.log(`🏷️ Final others=`, others)
-      
+      const currentId = currentUserId.value
+      const others = allMembers.filter(member => normalizeId(member.id) !== currentId)
+
       if ((props.room.room_type === 'direct' || others.length === 1) && others.length >= 1) {
-        const o = others[0]
-        const title = o.full_name || o.username || 'Chat'
-        console.log(`🏷️ Direct chat title: ${title}`)
-        return title
+        const partner = others[0]
+        return partner.full_name || partner.username || 'Chat'
       }
-      if (props.room.name) {
-        console.log(`🏷️ Group chat with name: ${props.room.name}`)
-        return props.room.name
+
+      if (props.room.name) return props.room.name
+
+      if (others.length) {
+        return others.map(member => member.full_name || member.username || 'User').join(', ')
       }
-      const groupTitle = others.map(m => m.full_name || m.username).join(', ')
-      console.log(`🏷️ Group chat title: ${groupTitle}`)
-      return groupTitle
+
+      return props.room.members?.length === 1
+        ? (props.room.members[0].full_name || props.room.members[0].username || 'Chat')
+        : 'Chat'
     })
     const roomAvatar = null
 
@@ -178,7 +189,7 @@ export default {
       load(); connectWS() 
     })
 
-    return { messages, draft, send, isSelf, formatTime, typingUser, handleTyping, messagesEl, roomTitle, roomAvatar, close }
+    return { messages, draft, send, isSelf, formatTime, typingUser, handleTyping, messagesEl, roomTitle, roomAvatar, close, currentUserId }
   }
 }
 </script>

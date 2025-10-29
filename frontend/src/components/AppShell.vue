@@ -524,41 +524,47 @@ export default {
     },
     async openChatWithUser(user) {
       try {
-        console.log(`🔍 Opening chat with user:`, user)
-        console.log(`🔍 Current open rooms:`, this.openRooms)
-        
-        // Check if already open - look for direct room with exactly this user and current user
-        const currentUserId = this.profile?.id || this.userId
-        const idx = this.openRooms.findIndex(r => {
-          if (r.room_type !== 'direct') return false
-          const members = r.members || []
-          const memberIds = members.map(m => String(m.id))
-          const hasUser = memberIds.includes(String(user.id))
-          const hasCurrentUser = memberIds.includes(String(currentUserId))
-          const isDirectChat = members.length === 2
-          console.log(`🔍 Room ${r.id}: hasUser=${hasUser}, hasCurrentUser=${hasCurrentUser}, isDirectChat=${isDirectChat}, memberIds=`, memberIds)
-          return hasUser && hasCurrentUser && isDirectChat
-        })
-        
-        if (idx !== -1) {
-          console.log(`🔍 Found existing room at index ${idx}, bringing to front`)
-          // bring to front by moving to end
-          const [win] = this.openRooms.splice(idx, 1)
-          this.openRooms.push(win)
+        const currentId = String(this.profile?.id || this.userId || '')
+        if (!currentId) {
+          console.warn('⚠️ Cannot open chat: current user id missing')
           return
         }
-        
-        console.log(`🔍 No existing room found, creating new one`)
-        // Create/find direct room
-        const { createChatRoom } = await import('../services/api')
-        const room = await createChatRoom({ room_type: 'direct', member_ids: [user.id], name: '' })
-        console.log(`🔍 Created/found room:`, room)
-        
-        // Append if not open
-        if (!this.openRooms.find(r => String(r.id) === String(room.id))) {
-          this.openRooms.push(room)
-          console.log(`🔍 Added room to openRooms. Total rooms:`, this.openRooms.length)
-          console.log(`🔍 currentUserId at this point:`, this.currentUserId)
+
+        const normalizeId = (value) => {
+          if (value === null || value === undefined) return null
+          if (typeof value === 'object') {
+            if ('id' in value) return normalizeId(value.id)
+            if ('value' in value) return normalizeId(value.value)
+          }
+          return String(value)
+        }
+
+        const targetId = String(user.id)
+        const idx = this.openRooms.findIndex(room => {
+          if (room.room_type !== 'direct') return false
+          const members = room.members || []
+          if (members.length !== 2) return false
+          const ids = members.map(m => normalizeId(m.id)).filter(Boolean)
+          return ids.includes(targetId) && ids.includes(currentId)
+        })
+
+        if (idx !== -1) {
+          const [existing] = this.openRooms.splice(idx, 1)
+          this.openRooms.push(existing)
+          return
+        }
+
+        const { createChatRoom, getChatRoom } = await import('../services/api')
+        const created = await createChatRoom({ room_type: 'direct', member_ids: [user.id], name: '' })
+        const roomId = created?.id
+        if (!roomId) return
+
+        const detailed = await getChatRoom(roomId).catch(() => created)
+
+        if (!this.openRooms.find(room => String(room.id) === String(roomId))) {
+          this.openRooms.push(detailed)
+        } else {
+          this.openRooms = this.openRooms.map(room => String(room.id) === String(roomId) ? detailed : room)
         }
       } catch (e) {
         console.error(`❌ Error opening chat with user:`, e)
