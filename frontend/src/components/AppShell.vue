@@ -26,13 +26,7 @@
           <span class="font-semibold text-lg">Patient</span>
         </router-link>
 
-        <router-link 
-          to="/chat" 
-          class="block px-6 py-3 rounded-r-full hover:bg-white/10 transition text-[#00BCD4] bg-white border-2 border-transparent max-w-[200px]"
-          active-class="!text-orange-500 !border-orange-500"
-        >
-          <span class="font-semibold text-lg">Chat</span>
-        </router-link>
+        
 
         <button 
           type="button"
@@ -218,6 +212,19 @@
       </main>
     </div>
 
+    <!-- Contacts panel on the right -->
+    <ContactsPanel @open-chat="openChatWithUser" />
+
+    <!-- Floating chat windows (like Facebook) -->
+    <template v-for="(win, idx) in openRooms" :key="win.id">
+      <ChatWindow
+        :room="win"
+        :current-user-id="profile?.id || userId"
+        :offset-right="16 + idx * 336"
+        @close="closeWindow"
+      />
+    </template>
+
     <!-- Toast Notification -->
     <transition name="fade">
       <div v-if="showToast" class="fixed top-4 right-4 z-50 bg-white shadow-xl rounded-lg p-4 w-80 border cursor-pointer" @click="openChatFromToast">
@@ -268,11 +275,14 @@
 <script>
 import { ref, onMounted } from 'vue'
 import { userStore } from '../store/user'
+import ContactsPanel from './ContactsPanel.vue'
+import ChatWindow from './ChatWindow.vue'
 
 export default {
   props: {
     title: { type: String, default: '' },
   },
+  components: { ContactsPanel, ChatWindow },
   data() {
     return {
       showLogoutModal: false,
@@ -294,6 +304,9 @@ export default {
       notifications: [],
       loadingNotifications: false,
       notificationsSeen: false, // Track if user has seen notifications
+      // Floating chat windows state
+      openRooms: [],
+      userId: null,
     }
   },
   computed: {
@@ -313,6 +326,10 @@ export default {
     window.addEventListener('messages-marked-read', this.handleMessagesRead)
     // Close search on click outside
     document.addEventListener('click', this.handleClickOutside)
+    try {
+      const cached = localStorage.getItem('user')
+      if (cached) this.userId = JSON.parse(cached).id
+    } catch {}
   },
   beforeUnmount() {
     if (this.unreadInterval) {
@@ -461,6 +478,25 @@ export default {
       }
       // Navigate to chat and trigger room selection via query param
       this.$router.push({ name: 'Chat', query: { room: this.toastRoomId } })
+    },
+    async openChatWithUser(user) {
+      try {
+        // Check if already open
+        const already = this.openRooms.find(r => (r.members||[]).some(m => String(m.id) === String(user.id)) && (r.members||[]).some(m => String(m.id) === String(this.profile?.id || this.userId)))
+        if (already) return
+        // Create/find direct room
+        const { createChatRoom } = await import('../services/api')
+        const room = await createChatRoom({ room_type: 'direct', member_ids: [user.id], name: '' })
+        // Append if not open
+        if (!this.openRooms.find(r => String(r.id) === String(room.id))) {
+          this.openRooms.push(room)
+        }
+      } catch (e) {
+        // swallow
+      }
+    },
+    closeWindow(roomId) {
+      this.openRooms = this.openRooms.filter(r => String(r.id) !== String(roomId))
     },
     async toggleNotifications() {
       this.showNotifications = !this.showNotifications

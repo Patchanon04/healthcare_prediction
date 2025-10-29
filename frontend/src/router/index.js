@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
-import RegisterView from '../views/RegisterView.vue'
 import PatientsList from '../views/PatientsList.vue'
 import Dashboard from '../views/Dashboard.vue'
 import PatientDetail from '../views/PatientDetail.vue'
@@ -11,7 +10,7 @@ const routes = [
   { path: '/', redirect: '/login' },
   { path: '/dashboard', name: 'Dashboard', component: Dashboard, meta: { title: 'Dashboard' } },
   { path: '/login', name: 'Login', component: LoginView, meta: { public: true } },
-  { path: '/register', name: 'Register', component: RegisterView, meta: { public: true } },
+  // Register route removed
   { path: '/patients', name: 'Patients', component: PatientsList, meta: { title: 'Patients' } },
   { path: '/patients/:id', name: 'PatientDetail', component: PatientDetail, props: true },
   { path: '/profile', name: 'Profile', component: ProfileView },
@@ -26,10 +25,10 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
 
-  // If route is public, allow (e.g., login/register)
+  // If route is public, allow (e.g., login)
   if (to.meta && to.meta.public) {
-    // If already logged in, prevent visiting login/register
-    if (token && (to.name === 'Login' || to.name === 'Register')) {
+    // If already logged in, prevent visiting login
+    if (token && (to.name === 'Login')) {
       return next({ name: 'Patients' })
     }
     return next()
