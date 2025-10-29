@@ -3,6 +3,7 @@ WebSocket consumers for real-time chat.
 """
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.core.cache import cache
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import User
 from .models import ChatRoom, Message
@@ -37,6 +38,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         
         await self.accept()
+        # Mark user online (short TTL to auto-expire)
+        try:
+            cache.set(f'user_online_{self.user.id}', True, timeout=120)
+        except Exception:
+            pass
         
         # Send user joined notification
         await self.channel_layer.group_send(
@@ -63,6 +69,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 self.room_group_name,
                 self.channel_name
             )
+        try:
+            cache.set(f'user_online_{self.user.id}', False, timeout=60)
+        except Exception:
+            pass
     
     async def receive(self, text_data):
         """Receive message from WebSocket."""
@@ -284,10 +294,18 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         self.group_name = f'user_{self.user.id}'
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
+        try:
+            cache.set(f'user_online_{self.user.id}', True, timeout=120)
+        except Exception:
+            pass
 
     async def disconnect(self, close_code):
         if hasattr(self, 'group_name'):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        try:
+            cache.set(f'user_online_{self.user.id}', False, timeout=60)
+        except Exception:
+            pass
 
     async def notify(self, event):
         # Forward notification to client

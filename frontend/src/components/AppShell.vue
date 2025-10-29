@@ -213,14 +213,14 @@
     </div>
 
     <!-- Contacts panel on the right -->
-    <ContactsPanel @open-chat="openChatWithUser" />
+    <ContactsPanel :current-user-id="profile?.id || userId" @open-chat="openChatWithUser" />
 
     <!-- Floating chat windows (like Facebook) -->
     <template v-for="(win, idx) in openRooms" :key="win.id">
       <ChatWindow
         :room="win"
         :current-user-id="profile?.id || userId"
-        :offset-right="16 + idx * 336"
+        :offset-right="304 + idx * 336"
         @close="closeWindow"
       />
     </template>

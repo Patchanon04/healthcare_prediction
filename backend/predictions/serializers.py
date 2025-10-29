@@ -150,10 +150,18 @@ class UserBasicSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='profile.full_name', read_only=True)
     avatar = serializers.ImageField(source='profile.avatar', read_only=True)
     role = serializers.CharField(source='profile.role', read_only=True)
+    online = serializers.SerializerMethodField()
+
+    def get_online(self, obj):
+        try:
+            from django.core.cache import cache
+            return bool(cache.get(f'user_online_{obj.id}', False))
+        except Exception:
+            return False
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'full_name', 'avatar', 'role']
+        fields = ['id', 'username', 'full_name', 'avatar', 'role', 'online']
 
 
 class MessageSerializer(serializers.ModelSerializer):

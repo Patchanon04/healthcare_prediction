@@ -11,13 +11,14 @@
         @click="$emit('open-chat', u)"
         class="w-full px-3 py-2 hover:bg-gray-50 flex items-center gap-3"
       >
-        <div class="w-9 h-9 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+        <div class="relative w-9 h-9 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
           <img v-if="u.avatar" :src="u.avatar" class="w-full h-full object-cover" />
           <span v-else class="text-sm font-semibold text-gray-600">{{ (u.full_name || u.username || 'U').charAt(0).toUpperCase() }}</span>
+          <span v-if="u.online" class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 ring-2 ring-white"></span>
         </div>
         <div class="text-sm text-left">
           <div class="font-medium text-gray-800 truncate">{{ u.full_name || u.username }}</div>
-          <div class="text-xs text-gray-500 capitalize">{{ u.role || 'user' }}</div>
+          <div class="text-xs text-gray-500 capitalize">{{ u.role || 'user' }}<span v-if="u.online" class="text-green-600 font-semibold ml-1">• Online</span></div>
         </div>
       </button>
       <div v-if="loading" class="p-3 text-center text-gray-500 text-sm">Loading...</div>
@@ -53,9 +54,15 @@ export default {
 
     const filteredUsers = computed(() => {
       const q = query.value.trim().toLowerCase()
-      const list = users.value.filter(u => String(u.id) !== String(props.currentUserId))
-      if (!q) return list
-      return list.filter(u => (u.full_name || u.username || '').toLowerCase().includes(q))
+      let list = users.value.filter(u => String(u.id) !== String(props.currentUserId))
+      if (q) list = list.filter(u => (u.full_name || u.username || '').toLowerCase().includes(q))
+      // Online first, then by display name
+      return list.slice().sort((a, b) => {
+        if (Boolean(b.online) !== Boolean(a.online)) return b.online ? 1 : -1
+        const an = (a.full_name || a.username || '').toLowerCase()
+        const bn = (b.full_name || b.username || '').toLowerCase()
+        return an.localeCompare(bn)
+      })
     })
 
     onMounted(load)
