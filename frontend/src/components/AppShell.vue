@@ -213,7 +213,7 @@
     </div>
 
     <!-- Contacts panel on the right (collapsible) -->
-    <ContactsPanel v-if="!contactsCollapsed" :current-user-id="profile?.id || userId" @open-chat="openChatWithUser" />
+    <ContactsPanel v-if="!contactsCollapsed" :current-user-id="currentUserId" @open-chat="openChatWithUser" />
     <!-- Collapse/expand button -->
     <button
       class="fixed right-2 top-1/2 -translate-y-1/2 z-30 bg-white border rounded-full w-8 h-8 flex items-center justify-center shadow hover:bg-gray-50"
@@ -227,9 +227,9 @@
     <!-- Floating chat windows (like Facebook) -->
     <template v-for="(win, idx) in openRooms" :key="win.id">
       <ChatWindow
-        v-if="profile?.id || userId"
+        v-if="currentUserId"
         :room="win"
-        :current-user-id="profile?.id || userId"
+        :current-user-id="currentUserId"
         :offset-right="(contactsCollapsed ? 16 : 304) + idx * 336"
         @close="closeWindow"
       />
@@ -332,6 +332,11 @@ export default {
     profile() {
       return userStore.profile
     },
+    currentUserId() {
+      const id = this.profile?.id || this.userId
+      console.log(`🆔 currentUserId computed: profile.id=${this.profile?.id}, userId=${this.userId}, result=${id}`)
+      return id
+    }
   },
   mounted() {
     this.loadProfile()
@@ -553,7 +558,8 @@ export default {
         // Append if not open
         if (!this.openRooms.find(r => String(r.id) === String(room.id))) {
           this.openRooms.push(room)
-          console.log(`🔍 Added room to openRooms`)
+          console.log(`🔍 Added room to openRooms. Total rooms:`, this.openRooms.length)
+          console.log(`🔍 currentUserId at this point:`, this.currentUserId)
         }
       } catch (e) {
         console.error(`❌ Error opening chat with user:`, e)
