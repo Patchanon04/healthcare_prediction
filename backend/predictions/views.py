@@ -645,19 +645,22 @@ class ChatRoomListCreateView(generics.ListCreateAPIView):
         room_type = request.data.get('room_type', 'group')
         member_ids = request.data.get('member_ids', [])
         
+        logger.info(f"📥 Received request: room_type={room_type}, member_ids={member_ids} (types: {[type(m).__name__ for m in member_ids]})")
+        
         # Normalize all IDs to integers
         normalized_member_ids = []
         for mid in member_ids:
             try:
                 normalized_member_ids.append(int(mid))
             except (ValueError, TypeError):
+                logger.warning(f"⚠️ Could not normalize member_id: {mid} (type: {type(mid).__name__})")
                 pass
         
         # All members including current user
         all_member_ids = set([request.user.id] + normalized_member_ids)
         expected_count = len(all_member_ids)
         
-        logger.info(f"Creating {room_type} chat with members: {all_member_ids}")
+        logger.info(f"🔍 Creating {room_type} chat with normalized members: {all_member_ids} (count: {expected_count})")
         
         # Find existing chat with exact same members
         # Start with rooms that include current user
@@ -672,12 +675,15 @@ class ChatRoomListCreateView(generics.ListCreateAPIView):
         # Check each candidate room for exact member match
         for room in candidate_rooms:
             room_member_ids = set(room.members.values_list('id', flat=True))
+            logger.info(f"🔍 Checking room {room.id}: room_members={room_member_ids}, target={all_member_ids}, match={room_member_ids == all_member_ids}")
+            
             if room_member_ids == all_member_ids:
                 # For direct chat, also verify room_type
                 if room_type == 'direct' and room.room_type != 'direct':
+                    logger.info(f"⚠️ Room {room.id} has same members but wrong type: {room.room_type} != direct")
                     continue
                 
-                logger.info(f"Chat with same members already exists: {room.id}")
+                logger.info(f"✅ Chat with same members already exists: {room.id}")
                 serializer = self.get_serializer(room)
                 return Response(serializer.data, status=status.HTTP_200_OK)
         
