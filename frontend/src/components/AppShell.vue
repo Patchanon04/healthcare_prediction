@@ -281,133 +281,334 @@
   </div>
 </template>
 
-<script>
-import { ref, onMounted } from 'vue'
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { userStore } from '../store/user'
 import ContactsPanel from './ContactsPanel.vue'
 import ChatWindow from './ChatWindow.vue'
 
-export default {
-  props: {
-    title: { type: String, default: '' },
-  },
-  components: { ContactsPanel, ChatWindow },
-  data() {
-    return {
-      showLogoutModal: false,
-      // Notification WS
-      notifWs: null,
-      showToast: false,
-      toastSender: '',
-      toastContent: '',
-      toastRoomId: null,
-      toastRoomName: '',
-      unreadCount: 0,
-      searchQuery: '',
-      searchResults: { patients: [], diagnoses: [], messages: [], total: 0 },
-      searchLoading: false,
-      showSearchResults: false,
-      searchTimeout: null,
-      // Notification dropdown
-      showNotifications: false,
-      notifications: [],
-      loadingNotifications: false,
-      notificationsSeen: false, // Track if user has seen notifications
-      // Floating chat windows state
-      openRooms: [],
-      userId: null,
-    }
-  },
-  computed: {
-    profile() {
-      return userStore.profile
-    },
-  },
-  mounted() {
-    this.loadProfile()
-    this.connectNotifyWebSocket()
-    this.fetchUnreadCount()
-    // Poll unread count every 30 seconds
-    this.unreadInterval = setInterval(() => {
-      this.fetchUnreadCount()
-    }, 30000)
-    // Listen for messages marked as read
-    window.addEventListener('messages-marked-read', this.handleMessagesRead)
-    // Close search on click outside
-    document.addEventListener('click', this.handleClickOutside)
-    try {
-      const cached = localStorage.getItem('user')
-      if (cached) this.userId = JSON.parse(cached).id
-    } catch {}
-    // Restore open chat windows
-    try {
-      const saved = JSON.parse(localStorage.getItem('open_rooms') || '[]')
-      if (Array.isArray(saved) && saved.length) {
-        import('../services/api').then(async ({ getChatRoom }) => {
-          for (const id of saved) {
-            try {
-              const room = await getChatRoom(id)
-              if (!this.openRooms.find(r => String(r.id) === String(room.id))) this.openRooms.push(room)
-            } catch {}
-          }
-        })
+const props = defineProps({
+  title: { type: String, default: '' },
+})
+
+// Reactive state
+const showLogoutModal = ref(false)
+const notifWs = ref(null)
+const showToast = ref(false)
+const toastSender = ref('')
+const toastContent = ref('')
+const toastRoomId = ref(null)
+const toastRoomName = ref('')
+const unreadCount = ref(0)
+const searchQuery = ref('')
+const searchResults = ref({ patients: [], diagnoses: [], messages: [], total: 0 })
+const searchLoading = ref(false)
+const showSearchResults = ref(false)
+const searchTimeout = ref(null)
+const showNotifications = ref(false)
+const notifications = ref([])
+const loadingNotifications = ref(false)
+const notificationsSeen = ref(false)
+const openRooms = ref([])
+const userId = ref(null)
+const unreadInterval = ref(null)
+
+// Computed properties
+const profile = computed(() => userStore.profile)
+
+// Methods
+const loadProfile = () => {
+  userStore.fetchProfile().catch(e => {
+    // token invalid, redirect to login
+    localStorage.removeItem('token')
+    window.location.href = '/login'
+  })
+}
+
+const fetchUnreadCount = async () => {
+  try {
+    const { getUnreadCount } = await import('../services/api')
+    const data = await getUnreadCount()
+    const newCount = data.unread_count || 0
+    
+    // Only update if notifications haven't been seen, or if count increased
+    if (!notificationsSeen.value || newCount > unreadCount.value) {
+      unreadCount.value = newCount
+      if (newCount > unreadCount.value) {
+        notificationsSeen.value = false // New messages arrived
       }
-    } catch {}
-  },
-  beforeUnmount() {
-    if (this.unreadInterval) {
-      clearInterval(this.unreadInterval)
     }
-    window.removeEventListener('messages-marked-read', this.handleMessagesRead)
-    document.removeEventListener('click', this.handleClickOutside)
-  },
-  methods: {
-    loadProfile() {
-      userStore.fetchProfile().catch(e => {
-        // token invalid, redirect to login
-        localStorage.removeItem('token')
-        window.location.href = '/login'
-      })
-    },
-    async fetchUnreadCount() {
-      try {
-        const { getUnreadCount } = await import('../services/api')
-        const data = await getUnreadCount()
-        const newCount = data.unread_count || 0
-        
-        // Only update if notifications haven't been seen, or if count increased
-        if (!this.notificationsSeen || newCount > this.unreadCount) {
-          this.unreadCount = newCount
-          if (newCount > this.unreadCount) {
-            this.notificationsSeen = false // New messages arrived
-          }
+  } catch (e) {
+    // Silently fail
+  }
+}
+
+const handleMessagesRead = (event) => {
+  // Decrement unread count when messages are marked as read
+  const count = event.detail?.count || 0
+  unreadCount.value = Math.max(0, unreadCount.value - count)
+  // Reset seen flag so badge can show again if needed
+  notificationsSeen.value = false
+}
+
+const handleSearchInput = () => {
+  clearTimeout(searchTimeout.value)
+  if (searchQuery.value.length < 2) {
+    searchResults.value = { patients: [], diagnoses: [], messages: [], total: 0 }
+    showSearchResults.value = false
+    return
+  }
+  searchTimeout.value = setTimeout(() => {
+    performSearch()
+  }, 300)
+}
+
+const performSearch = async () => {
+  try {
+    searchLoading.value = true
+    console.log('🔍 Searching for:', searchQuery.value)
+    const { searchAll } = await import('../services/api')
+    const data = await searchAll(searchQuery.value)
+    searchResults.value = {
+      patients: data.patients || [],
+      diagnoses: data.diagnoses || [],
+      messages: data.messages || [],
+      total: (data.patients?.length || 0) + (data.diagnoses?.length || 0) + (data.messages?.length || 0)
+    }
+    showSearchResults.value = true
+  } catch (err) {
+    console.error('Search failed:', err)
+  } finally {
+    searchLoading.value = false
+  }
+}
+
+const closeSearch = () => {
+  showSearchResults.value = false
+  searchQuery.value = ''
+}
+
+const formatSearchDate = (timestamp) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+const handleClickOutside = (event) => {
+  const searchEl = document.querySelector('.search-container')
+  if (searchEl && !searchEl.contains(event.target)) {
+    closeSearch()
+  }
+}
+
+const connectNotifyWebSocket = () => {
+  try {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws/notifications/`
+    notifWs.value = new WebSocket(wsUrl)
+
+    notifWs.value.onopen = () => {
+      console.log('WebSocket Connected')
+    }
+
+    notifWs.value.onmessage = (e) => {
+      const data = JSON.parse(e.data)
+      if (data.type === 'new_message') {
+        // Update unread count
+        unreadCount.value += 1
+        // Show toast notification
+        showToastNotification(
+          data.sender,
+          data.content,
+          data.room_id,
+          data.room_name
+        )
+      }
+    }
+
+    notifWs.value.onclose = () => {
+      console.log('WebSocket Disconnected')
+      // Try to reconnect after 5 seconds
+      setTimeout(connectNotifyWebSocket, 5000)
+    }
+  } catch (error) {
+    console.error('WebSocket error:', error)
+  }
+}
+
+const showToastNotification = (sender, content, roomId, roomName) => {
+  toastSender.value = sender
+  toastContent.value = content
+  toastRoomId.value = roomId
+  toastRoomName.value = roomName
+  showToast.value = true
+  
+  // Auto-hide after 5 seconds
+  setTimeout(() => {
+    showToast.value = false
+  }, 5000)
+}
+
+const openChatFromToast = () => {
+  if (toastRoomId.value) {
+    openChatWithUser({ id: toastRoomId.value })
+  }
+  showToast.value = false
+}
+
+const openChatWithUser = async (user) => {
+  try {
+    // Check if chat is already open
+    const existingRoom = openRooms.value.find(r => 
+      r.id === user.id || 
+      (r.participants && r.participants.some(p => p.id === user.id))
+    )
+    
+    if (existingRoom) {
+      // Move to end of array to bring to front
+      openRooms.value = [
+        ...openRooms.value.filter(r => r.id !== existingRoom.id),
+        existingRoom
+      ]
+      return
+    }
+    
+    // Create or get room
+    const { getOrCreateDirectRoom } = await import('../services/api')
+    const room = await getOrCreateDirectRoom(user.id)
+    openRooms.value = [...openRooms.value, room]
+    
+    // Save to localStorage
+    const saved = JSON.parse(localStorage.getItem('open_rooms') || '[]')
+    if (!saved.includes(room.id)) {
+      localStorage.setItem('open_rooms', JSON.stringify([...saved, room.id]))
+    }
+  } catch (err) {
+    console.error('Failed to open chat:', err)
+  }
+}
+
+const closeWindow = (roomId) => {
+  openRooms.value = openRooms.value.filter(r => r.id !== roomId)
+  
+  // Update localStorage
+  const saved = JSON.parse(localStorage.getItem('open_rooms') || '[]')
+  localStorage.setItem(
+    'open_rooms', 
+    JSON.stringify(saved.filter(id => id !== roomId))
+  )
+}
+
+// Lifecycle hooks
+onMounted(() => {
+  loadProfile()
+  connectNotifyWebSocket()
+  fetchUnreadCount()
+  
+  // Poll unread count every 30 seconds
+  unreadInterval.value = setInterval(() => {
+    fetchUnreadCount()
+  }, 30000)
+  
+  // Listen for messages marked as read
+  window.addEventListener('messages-marked-read', handleMessagesRead)
+  
+  // Close search on click outside
+  document.addEventListener('click', handleClickOutside)
+  
+  // Restore user ID
+  try {
+    const cached = localStorage.getItem('user')
+    if (cached) userId.value = JSON.parse(cached).id
+  } catch {}
+  
+  // Restore open chat windows
+  try {
+    const saved = JSON.parse(localStorage.getItem('open_rooms') || '[]')
+    if (Array.isArray(saved) && saved.length) {
+      import('../services/api').then(async ({ getChatRoom }) => {
+        for (const id of saved) {
+          try {
+            const room = await getChatRoom(id)
+            if (!openRooms.value.find(r => String(r.id) === String(room.id))) {
+              openRooms.value = [...openRooms.value, room]
+            }
+          } catch {}
         }
-      } catch (e) {
-        // Silently fail
-      }
-    },
-    handleMessagesRead(event) {
-      // Decrement unread count when messages are marked as read
-      const count = event.detail?.count || 0
-      this.unreadCount = Math.max(0, this.unreadCount - count)
-      // Reset seen flag so badge can show again if needed
-      this.notificationsSeen = false
-    },
-    handleSearchInput() {
-      clearTimeout(this.searchTimeout)
-      if (this.searchQuery.length < 2) {
-        this.searchResults = { patients: [], diagnoses: [], messages: [], total: 0 }
-        this.showSearchResults = false
-        return
-      }
-      this.searchTimeout = setTimeout(() => {
-        this.performSearch()
-      }, 300)
-    },
-    async performSearch() {
-      try {
-        this.searchLoading = true
-        console.log('🔍 Searching for:', this.searchQuery)
+      })
+    }
+  } catch {}
+})
+
+onBeforeUnmount(() => {
+  if (unreadInterval.value) {
+    clearInterval(unreadInterval.value)
+  }
+  if (notifWs.value) {
+    notifWs.value.close()
+  }
+  window.removeEventListener('messages-marked-read', handleMessagesRead)
+  document.removeEventListener('click', handleClickOutside)
+})
+
+// Watch for open rooms changes
+watch(openRooms, (newVal) => {
+  // Save to localStorage when open rooms change
+  localStorage.setItem(
+    'open_rooms',
+    JSON.stringify(newVal.map(r => r.id))
+  )
+}, { deep: true })
+
+// Notification methods
+const toggleNotifications = () => {
+  showNotifications.value = !showNotifications.value
+  if (showNotifications.value) {
+    loadNotifications()
+    notificationsSeen.value = true
+    unreadCount.value = 0
+  }
+}
+
+const loadNotifications = async () => {
+  try {
+    loadingNotifications.value = true
+    const { getNotifications } = await import('../services/api')
+    const data = await getNotifications()
+    notifications.value = data.results || []
+  } catch (err) {
+    console.error('Failed to load notifications:', err)
+  } finally {
+    loadingNotifications.value = false
+  }
+}
+
+const closeNotifications = () => {
+  showNotifications.value = false
+}
+
+const formatNotifTime = (timestamp) => {
+  if (!timestamp) return ''
+  const now = new Date()
+  const date = new Date(timestamp)
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  
+  if (diffMins < 1) return 'just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`
+  return date.toLocaleDateString()
+}
+
+const confirmLogout = () => {
+  showLogoutModal.value = true
+}
+
+const logout = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  window.location.href = '/login'
+}
         const { globalSearch } = await import('../services/api')
         const results = await globalSearch(this.searchQuery)
         console.log('✅ Search results:', results)
