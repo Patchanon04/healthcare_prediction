@@ -53,9 +53,22 @@ export default {
     const typingTimeout = ref(null)
     const messagesEl = ref(null)
 
-    const isSelf = (m) => String(m?.sender?.id) === String(props.currentUserId)
+    const isSelf = (m) => {
+      const sid = m && m.sender ? (m.sender.id ?? m.sender) : null
+      return String(sid) === String(props.currentUserId)
+    }
 
-    const roomTitle = props.room.name || (props.room.members || []).filter(m => String(m.id) !== String(props.currentUserId)).map(m => m.full_name || m.username).join(', ')
+    // Title: for direct chat show only counterpart name, for group fall back to room.name or members (excluding self)
+    const computeTitle = () => {
+      const others = (props.room.members || []).filter(m => String(m.id) !== String(props.currentUserId))
+      if ((props.room.room_type === 'direct' || others.length === 1) && others.length >= 1) {
+        const o = others[0]
+        return o.full_name || o.username || 'Chat'
+      }
+      if (props.room.name) return props.room.name
+      return others.map(m => m.full_name || m.username).join(', ')
+    }
+    const roomTitle = computeTitle()
     const roomAvatar = null
 
     const scrollToBottom = () => { if (messagesEl.value) messagesEl.value.scrollTop = messagesEl.value.scrollHeight }
@@ -111,6 +124,7 @@ export default {
       if (!ws.value || ws.value.readyState !== WebSocket.OPEN) return
       ws.value.send(JSON.stringify({ type: 'message', content: draft.value.trim() }))
       draft.value = ''
+      try { localStorage.removeItem(`chat_draft_${props.room.id}`) } catch {}
     }
 
     const handleTyping = () => {
@@ -120,13 +134,22 @@ export default {
       typingTimeout.value = setTimeout(() => {
         ws.value?.send(JSON.stringify({ type: 'typing', is_typing: false }))
       }, 800)
+      // persist draft per room
+      try { localStorage.setItem(`chat_draft_${props.room.id}`, draft.value) } catch {}
     }
 
     const close = () => emit('close', props.room.id)
 
-    onMounted(() => { load(); connectWS() })
+    onMounted(() => { 
+      // restore draft
+      try { const d = localStorage.getItem(`chat_draft_${props.room.id}`); if (d) draft.value = d } catch {}
+      load(); connectWS() 
+    })
     onBeforeUnmount(() => { if (ws.value) ws.value.close() })
-    watch(() => props.room.id, () => { load(); connectWS() })
+    watch(() => props.room.id, () => { 
+      try { const d = localStorage.getItem(`chat_draft_${props.room.id}`); if (d) draft.value = d; else draft.value = '' } catch { draft.value = '' }
+      load(); connectWS() 
+    })
 
     return { messages, draft, send, isSelf, formatTime, typingUser, handleTyping, messagesEl, roomTitle, roomAvatar, close }
   }
