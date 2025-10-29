@@ -596,6 +596,21 @@ export default {
     closeWindow(roomId) {
       this.openRooms = this.openRooms.filter(r => String(r.id) !== String(roomId))
     },
+    confirmLogout() {
+      this.showLogoutModal = true
+    },
+    logout() {
+      userStore.clearProfile()
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      localStorage.removeItem('open_rooms')
+      
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('user-changed'))
+      
+      this.showLogoutModal = false
+      window.location.href = '/login'
+    },
   },
   watch: {
     openRooms: {
