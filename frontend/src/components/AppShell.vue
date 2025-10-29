@@ -332,13 +332,32 @@ export default {
       return userStore.profile
     },
     currentUserId() {
-      const id = this.profile?.id || this.userId
+      // Try profile first, then userId from localStorage, then try to get from cached user
+      let id = this.profile?.id || this.userId
+      
+      // If still null, try to read from localStorage directly
+      if (!id) {
+        try {
+          const cached = localStorage.getItem('user')
+          if (cached) {
+            const user = JSON.parse(cached)
+            id = user.id
+            // Update userId for next time
+            if (id && !this.userId) {
+              this.userId = id
+            }
+          }
+        } catch (e) {
+          console.error('Failed to parse user from localStorage:', e)
+        }
+      }
+      
       console.log(`🆔 currentUserId computed: profile.id=${this.profile?.id}, userId=${this.userId}, result=${id}`)
       return id
     }
   },
-  mounted() {
-    this.loadProfile()
+  async mounted() {
+    await this.loadProfile()
     this.connectNotifyWebSocket()
     this.fetchUnreadCount()
     // Poll unread count every 30 seconds
@@ -384,40 +403,14 @@ export default {
   methods: {
     async loadProfile() {
       try {
-        const profile = await userStore.fetchProfile()
-        if (profile?.id) {
-          this.userId = profile.id
-          try { localStorage.setItem('user', JSON.stringify({ id: profile.id })) } catch {}
-        }
-        return profile
+        await userStore.fetchProfile()
+        console.log('✅ Profile loaded:', userStore.profile)
       } catch (e) {
+        console.error('❌ Failed to load profile:', e)
+        // token invalid, redirect to login
         localStorage.removeItem('token')
         window.location.href = '/login'
-        throw e
       }
-    },
-    async ensureCurrentUserId() {
-      if (this.profile?.id) {
-        this.userId = this.profile.id
-        return this.userId
-      }
-      if (this.userId) return this.userId
-      try {
-        const cached = localStorage.getItem('user')
-        if (cached) {
-          const parsed = JSON.parse(cached)
-          if (parsed?.id) {
-            this.userId = parsed.id
-            return this.userId
-          }
-        }
-      } catch {}
-      const profile = await this.loadProfile().catch(() => null)
-      if (profile?.id) {
-        this.userId = profile.id
-        return this.userId
-      }
-      return null
     },
     async fetchUnreadCount() {
       try {
@@ -554,11 +547,7 @@ export default {
     },
     async openChatWithUser(user) {
       try {
-        let currentId = String(this.profile?.id || this.userId || '')
-        if (!currentId) {
-          const ensured = await this.ensureCurrentUserId()
-          currentId = ensured ? String(ensured) : ''
-        }
+        const currentId = String(this.profile?.id || this.userId || '')
         if (!currentId) {
           console.warn('⚠️ Cannot open chat: current user id missing')
           return
