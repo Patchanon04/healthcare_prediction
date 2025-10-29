@@ -663,18 +663,20 @@ class ChatRoomListCreateView(generics.ListCreateAPIView):
         logger.info(f"🔍 Creating {room_type} chat with normalized members: {all_member_ids} (count: {expected_count})")
         
         # Find existing chat with exact same members
-        # Start with rooms that include current user
-        candidate_rooms = ChatRoom.objects.filter(
-            members=request.user
-        ).annotate(
-            member_count=Count('members')
-        ).filter(
-            member_count=expected_count
-        )
+        # Get all rooms where current user is a member
+        candidate_rooms = ChatRoom.objects.filter(members=request.user).prefetch_related('members')
+        
+        logger.info(f"🔍 Found {candidate_rooms.count()} candidate rooms for user {request.user.id}")
         
         # Check each candidate room for exact member match
         for room in candidate_rooms:
             room_member_ids = set(room.members.values_list('id', flat=True))
+            
+            # Skip if member count doesn't match
+            if len(room_member_ids) != expected_count:
+                logger.info(f"⏭️ Skipping room {room.id}: member_count={len(room_member_ids)} != {expected_count}")
+                continue
+            
             logger.info(f"🔍 Checking room {room.id}: room_members={room_member_ids}, target={all_member_ids}, match={room_member_ids == all_member_ids}")
             
             if room_member_ids == all_member_ids:
@@ -688,12 +690,8 @@ class ChatRoomListCreateView(generics.ListCreateAPIView):
                 return Response(serializer.data, status=status.HTTP_200_OK)
         
         # Create new room if not exists
-        logger.info(f"No existing chat found, creating new {room_type} room")
+        logger.info(f"❌ No existing chat found, creating new {room_type} room")
         return super().create(request, *args, **kwargs)
-    
-    def perform_create(self, serializer):
-        """Create room and add current user as member."""
-        serializer.save()
 
 
 class ChatRoomDetailView(generics.RetrieveAPIView):

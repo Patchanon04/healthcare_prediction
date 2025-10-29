@@ -227,13 +227,22 @@ class ChatRoomSerializer(serializers.ModelSerializer):
             **validated_data
         )
         
-        # Add members
-        if member_ids:
-            room.members.set(User.objects.filter(id__in=member_ids))
+        # Normalize member IDs to integers
+        normalized_ids = []
+        for mid in member_ids:
+            try:
+                normalized_ids.append(int(mid))
+            except (ValueError, TypeError):
+                pass
         
-        # Always add creator
+        # Add current user to member list
         if request and request.user:
-            room.members.add(request.user)
+            normalized_ids.append(request.user.id)
+        
+        # Remove duplicates and add all members at once
+        unique_ids = list(set(normalized_ids))
+        if unique_ids:
+            room.members.set(User.objects.filter(id__in=unique_ids))
         
         return room
 
