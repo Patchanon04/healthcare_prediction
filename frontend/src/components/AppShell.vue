@@ -636,22 +636,32 @@ export default {
         })
 
         if (idx !== -1) {
+          console.log('✅ Found existing room in openRooms, bringing to front')
           const [existing] = this.openRooms.splice(idx, 1)
           this.openRooms.push(existing)
           return
         }
 
         const { createChatRoom, getChatRoom } = await import('../services/api')
+        console.log(`🔄 Creating/fetching chat room for user ${user.id}`)
         const created = await createChatRoom({ room_type: 'direct', member_ids: [user.id], name: '' })
         const roomId = created?.id
-        if (!roomId) return
+        if (!roomId) {
+          console.warn('⚠️ No room ID returned from createChatRoom')
+          return
+        }
 
+        console.log(`📦 Received room: ${roomId}, fetching details...`)
         const detailed = await getChatRoom(roomId).catch(() => created)
 
-        if (!this.openRooms.find(room => String(room.id) === String(roomId))) {
-          this.openRooms.push(detailed)
-        } else {
+        // Check again if room was added while we were fetching
+        const existingIdx = this.openRooms.findIndex(room => String(room.id) === String(roomId))
+        if (existingIdx !== -1) {
+          console.log(`✅ Room ${roomId} already in openRooms, updating`)
           this.openRooms = this.openRooms.map(room => String(room.id) === String(roomId) ? detailed : room)
+        } else {
+          console.log(`➕ Adding room ${roomId} to openRooms`)
+          this.openRooms.push(detailed)
         }
       } catch (e) {
         console.error(`❌ Error opening chat with user:`, e)
