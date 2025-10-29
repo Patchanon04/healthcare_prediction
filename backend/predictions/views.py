@@ -421,7 +421,14 @@ def login(request):
     if not user:
         return Response({'error': 'Invalid username or password'}, status=status.HTTP_401_UNAUTHORIZED)
     token, _ = Token.objects.get_or_create(user=user)
-    return Response({'token': token.key, 'username': user.username, 'email': user.email})
+    return Response({
+        'token': token.key,
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email
+        }
+    })
 
 
 @api_view(['GET'])
