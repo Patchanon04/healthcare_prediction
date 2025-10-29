@@ -645,8 +645,16 @@ class ChatRoomListCreateView(generics.ListCreateAPIView):
         room_type = request.data.get('room_type', 'group')
         member_ids = request.data.get('member_ids', [])
         
+        # Normalize all IDs to integers
+        normalized_member_ids = []
+        for mid in member_ids:
+            try:
+                normalized_member_ids.append(int(mid))
+            except (ValueError, TypeError):
+                pass
+        
         # All members including current user
-        all_member_ids = set([request.user.id] + list(member_ids))
+        all_member_ids = set([request.user.id] + normalized_member_ids)
         expected_count = len(all_member_ids)
         
         logger.info(f"Creating {room_type} chat with members: {all_member_ids}")
