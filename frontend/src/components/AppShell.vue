@@ -227,7 +227,6 @@
     <!-- Floating chat windows (like Facebook) -->
     <template v-for="(win, idx) in openRooms" :key="win.id">
       <ChatWindow
-        v-if="currentUserId"
         :room="win"
         :current-user-id="currentUserId"
         :offset-right="(contactsCollapsed ? 16 : 304) + idx * 336"
