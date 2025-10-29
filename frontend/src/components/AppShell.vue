@@ -227,6 +227,7 @@
     <!-- Floating chat windows (like Facebook) -->
     <template v-for="(win, idx) in openRooms" :key="win.id">
       <ChatWindow
+        v-if="profile?.id || userId"
         :room="win"
         :current-user-id="profile?.id || userId"
         :offset-right="(contactsCollapsed ? 16 : 304) + idx * 336"
@@ -315,7 +316,14 @@ export default {
       notificationsSeen: false, // Track if user has seen notifications
       // Floating chat windows state
       openRooms: [],
-      userId: null,
+      userId: (() => {
+        try {
+          const cached = localStorage.getItem('user')
+          return cached ? JSON.parse(cached).id : null
+        } catch {
+          return null
+        }
+      })(),
       // Collapsible contacts panel
       contactsCollapsed: false,
     }
@@ -337,10 +345,6 @@ export default {
     window.addEventListener('messages-marked-read', this.handleMessagesRead)
     // Close search on click outside
     document.addEventListener('click', this.handleClickOutside)
-    try {
-      const cached = localStorage.getItem('user')
-      if (cached) this.userId = JSON.parse(cached).id
-    } catch {}
     // Restore open chat windows
     try {
       const saved = JSON.parse(localStorage.getItem('open_rooms') || '[]')
