@@ -316,6 +316,8 @@ export default {
       // Floating chat windows state
       openRooms: [],
       userId: null,
+      // Collapsible contacts panel
+      contactsCollapsed: false,
     }
   },
   computed: {

@@ -54,19 +54,32 @@ export default {
     const messagesEl = ref(null)
 
     const isSelf = (m) => {
-      const sid = m && m.sender ? (m.sender.id ?? m.sender) : null
-      return String(sid) === String(props.currentUserId)
+      if (!m || !m.sender) return false
+      const senderId = m.sender.id || m.sender
+      const currentId = props.currentUserId
+      console.log(`🔍 isSelf check: senderId=${senderId}, currentId=${currentId}, result=${String(senderId) === String(currentId)}`)
+      return String(senderId) === String(currentId)
     }
 
     // Title: for direct chat show only counterpart name, for group fall back to room.name or members (excluding self)
     const computeTitle = () => {
-      const others = (props.room.members || []).filter(m => String(m.id) !== String(props.currentUserId))
+      const allMembers = props.room.members || []
+      const others = allMembers.filter(m => String(m.id) !== String(props.currentUserId))
+      console.log(`🏷️ Title computation: currentUserId=${props.currentUserId}, allMembers=`, allMembers, 'others=', others)
+      
       if ((props.room.room_type === 'direct' || others.length === 1) && others.length >= 1) {
         const o = others[0]
-        return o.full_name || o.username || 'Chat'
+        const title = o.full_name || o.username || 'Chat'
+        console.log(`🏷️ Direct chat title: ${title}`)
+        return title
       }
-      if (props.room.name) return props.room.name
-      return others.map(m => m.full_name || m.username).join(', ')
+      if (props.room.name) {
+        console.log(`🏷️ Group chat with name: ${props.room.name}`)
+        return props.room.name
+      }
+      const groupTitle = others.map(m => m.full_name || m.username).join(', ')
+      console.log(`🏷️ Group chat title: ${groupTitle}`)
+      return groupTitle
     }
     const roomTitle = computeTitle()
     const roomAvatar = null
@@ -110,13 +123,17 @@ export default {
 
     const load = async () => {
       try {
+        console.log(`📥 Loading messages for room ${props.room.id}`)
         const data = await listMessages(props.room.id, { pageSize: 100 })
+        console.log(`📥 Loaded ${(data.results || []).length} messages:`, data.results)
         messages.value = data.results || []
         await nextTick(); scrollToBottom()
         // mark read
         const unread = messages.value.filter(m => !m.is_read && String(m.sender?.id) !== String(props.currentUserId)).map(m => m.id)
         if (unread.length) markMessagesRead(props.room.id, unread).catch(()=>{})
-      } catch {}
+      } catch (error) {
+        console.error(`❌ Failed to load messages for room ${props.room.id}:`, error)
+      }
     }
 
     const send = () => {
