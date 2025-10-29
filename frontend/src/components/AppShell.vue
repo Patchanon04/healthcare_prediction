@@ -456,8 +456,41 @@ export default {
       const room = event.detail?.room
       if (!room) return
       
-      // Check if already open
-      const idx = this.openRooms.findIndex(r => String(r.id) === String(room.id))
+      const currentId = String(this.profile?.id || this.userId || '')
+      if (!currentId) {
+        console.warn('⚠️ Cannot open chat: current user id missing')
+        return
+      }
+
+      const normalizeId = (value) => {
+        if (value === null || value === undefined) return null
+        if (typeof value === 'object') {
+          if ('id' in value) return normalizeId(value.id)
+          if ('value' in value) return normalizeId(value.value)
+        }
+        return String(value)
+      }
+
+      // Check if already open by room ID OR by members (for direct chats)
+      let idx = this.openRooms.findIndex(r => String(r.id) === String(room.id))
+      
+      // If not found by ID and it's a direct chat, check by members
+      if (idx === -1 && room.room_type === 'direct') {
+        const roomMembers = room.members || []
+        if (roomMembers.length === 2) {
+          const roomMemberIds = roomMembers.map(m => normalizeId(m.id)).filter(Boolean)
+          idx = this.openRooms.findIndex(r => {
+            if (r.room_type !== 'direct') return false
+            const members = r.members || []
+            if (members.length !== 2) return false
+            const ids = members.map(m => normalizeId(m.id)).filter(Boolean)
+            return ids.length === 2 && 
+                   ids.includes(roomMemberIds[0]) && 
+                   ids.includes(roomMemberIds[1])
+          })
+        }
+      }
+      
       if (idx !== -1) {
         // Bring to front
         const [existing] = this.openRooms.splice(idx, 1)
