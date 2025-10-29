@@ -212,15 +212,24 @@
       </main>
     </div>
 
-    <!-- Contacts panel on the right -->
-    <ContactsPanel :current-user-id="profile?.id || userId" @open-chat="openChatWithUser" />
+    <!-- Contacts panel on the right (collapsible) -->
+    <ContactsPanel v-if="!contactsCollapsed" :current-user-id="profile?.id || userId" @open-chat="openChatWithUser" />
+    <!-- Collapse/expand button -->
+    <button
+      class="fixed right-2 top-1/2 -translate-y-1/2 z-30 bg-white border rounded-full w-8 h-8 flex items-center justify-center shadow hover:bg-gray-50"
+      @click="contactsCollapsed = !contactsCollapsed"
+      :title="contactsCollapsed ? 'Show contacts' : 'Hide contacts'"
+    >
+      <span v-if="contactsCollapsed">❮</span>
+      <span v-else>❯</span>
+    </button>
 
     <!-- Floating chat windows (like Facebook) -->
     <template v-for="(win, idx) in openRooms" :key="win.id">
       <ChatWindow
         :room="win"
         :current-user-id="profile?.id || userId"
-        :offset-right="304 + idx * 336"
+        :offset-right="(contactsCollapsed ? 16 : 304) + idx * 336"
         @close="closeWindow"
       />
     </template>
@@ -329,6 +338,20 @@ export default {
     try {
       const cached = localStorage.getItem('user')
       if (cached) this.userId = JSON.parse(cached).id
+    } catch {}
+    // Restore open chat windows
+    try {
+      const saved = JSON.parse(localStorage.getItem('open_rooms') || '[]')
+      if (Array.isArray(saved) && saved.length) {
+        import('../services/api').then(async ({ getChatRoom }) => {
+          for (const id of saved) {
+            try {
+              const room = await getChatRoom(id)
+              if (!this.openRooms.find(r => String(r.id) === String(room.id))) this.openRooms.push(room)
+            } catch {}
+          }
+        })
+      }
     } catch {}
   },
   beforeUnmount() {
@@ -482,8 +505,13 @@ export default {
     async openChatWithUser(user) {
       try {
         // Check if already open
-        const already = this.openRooms.find(r => (r.members||[]).some(m => String(m.id) === String(user.id)) && (r.members||[]).some(m => String(m.id) === String(this.profile?.id || this.userId)))
-        if (already) return
+        const idx = this.openRooms.findIndex(r => (r.members||[]).some(m => String(m.id) === String(user.id)) && (r.members||[]).some(m => String(m.id) === String(this.profile?.id || this.userId)))
+        if (idx !== -1) {
+          // bring to front by moving to end
+          const [win] = this.openRooms.splice(idx, 1)
+          this.openRooms.push(win)
+          return
+        }
         // Create/find direct room
         const { createChatRoom } = await import('../services/api')
         const room = await createChatRoom({ room_type: 'direct', member_ids: [user.id], name: '' })
@@ -498,13 +526,43 @@ export default {
     closeWindow(roomId) {
       this.openRooms = this.openRooms.filter(r => String(r.id) !== String(roomId))
     },
-    async toggleNotifications() {
+  },
+  watch: {
+    openRooms: {
+      deep: true,
+      handler(newVal) {
+        try {
+          const ids = newVal.map(r => r.id)
+          localStorage.setItem('open_rooms', JSON.stringify(ids))
+        } catch {}
+      }
+    }
+  },
+  mounted() {
+    try {
+      const saved = localStorage.getItem('open_rooms')
+      if (saved) {
+        const ids = JSON.parse(saved)
+        if (Array.isArray(ids)) {
+          import('../services/api').then(async ({ getChatRoom }) => {
+            for (const id of ids) {
+              try {
+                const room = await getChatRoom(id)
+                if (!this.openRooms.find(r => String(r.id) === String(room.id))) this.openRooms.push(room)
+              } catch {}
+            }
+          })
+        }
+      }
+    } catch {}
+  },
+  async toggleNotifications() {
       this.showNotifications = !this.showNotifications
       if (this.showNotifications) {
         await this.loadNotifications()
         // Mark as seen - badge will stay hidden until new messages arrive
         this.notificationsSeen = true
-        this.unreadCount = 0
+{{ ... }}
       }
     },
     async loadNotifications() {
