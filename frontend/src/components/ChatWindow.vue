@@ -57,18 +57,26 @@ export default {
       if (!m || !m.sender) return false
       const senderId = m.sender.id || m.sender
       const currentId = props.currentUserId
+      console.log(`🔍 DEBUG: message=`, m, `senderId=${senderId}, currentId=${currentId}, types: ${typeof senderId}/${typeof currentId}`)
       const result = String(senderId) === String(currentId)
-      if (!result) {
-        console.log(`🔍 isSelf check: senderId=${senderId}, currentId=${currentId}, result=${result}`)
-      }
+      console.log(`🔍 isSelf result: ${result}`)
       return result
     }
 
     // Title: for direct chat show only counterpart name, for group fall back to room.name or members (excluding self)
     const roomTitle = computed(() => {
       const allMembers = props.room.members || []
-      const others = allMembers.filter(m => String(m.id) !== String(props.currentUserId))
-      console.log(`🏷️ Title computation: currentUserId=${props.currentUserId}, allMembers=`, allMembers, 'others=', others)
+      const currentId = props.currentUserId
+      console.log(`🏷️ DEBUG: room=`, props.room, `currentUserId=${currentId}, type=${typeof currentId}`)
+      console.log(`🏷️ DEBUG: allMembers=`, allMembers)
+      
+      const others = allMembers.filter(m => {
+        const memberId = m.id
+        const match = String(memberId) !== String(currentId)
+        console.log(`🏷️ Member ${memberId} (${typeof memberId}) vs Current ${currentId} (${typeof currentId}) = keep: ${match}`)
+        return match
+      })
+      console.log(`🏷️ Final others=`, others)
       
       if ((props.room.room_type === 'direct' || others.length === 1) && others.length >= 1) {
         const o = others[0]
