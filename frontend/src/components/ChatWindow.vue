@@ -129,6 +129,10 @@ export default {
           if (data.type === 'message') {
             messages.value.push(data.message)
             nextTick(scrollToBottom)
+            // Broadcast to other components
+            window.dispatchEvent(new CustomEvent('chat-message-received', { 
+              detail: { roomId: props.room.id, message: data.message } 
+            }))
           } else if (data.type === 'typing') {
             if (data.is_typing) {
               typingUser.value = data.username
@@ -178,12 +182,29 @@ export default {
 
     const close = () => emit('close', props.room.id)
 
+    // Listen for messages from other components
+    const handleExternalMessage = (event) => {
+      if (event.detail.roomId === props.room.id) {
+        const msg = event.detail.message
+        // Only add if not already in list
+        if (!messages.value.find(m => m.id === msg.id)) {
+          messages.value.push(msg)
+          nextTick(scrollToBottom)
+        }
+      }
+    }
+
     onMounted(() => { 
       // restore draft
       try { const d = localStorage.getItem(`chat_draft_${props.room.id}`); if (d) draft.value = d } catch {}
-      load(); connectWS() 
+      load(); connectWS()
+      // Listen for messages from other components
+      window.addEventListener('chat-message-received', handleExternalMessage)
     })
-    onBeforeUnmount(() => { if (ws.value) ws.value.close() })
+    onBeforeUnmount(() => { 
+      if (ws.value) ws.value.close()
+      window.removeEventListener('chat-message-received', handleExternalMessage)
+    })
     watch(() => props.room.id, () => { 
       try { const d = localStorage.getItem(`chat_draft_${props.room.id}`); if (d) draft.value = d; else draft.value = '' } catch { draft.value = '' }
       load(); connectWS() 

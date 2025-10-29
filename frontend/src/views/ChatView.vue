@@ -300,10 +300,8 @@ export default {
     }
 
     const selectRoom = (room) => {
-      selectedRoom.value = room
-      messages.value = []
-      fetchMessages(room.id)
-      connectWebSocket(room.id)
+      // Instead of showing in ChatView, emit event to open floating panel
+      window.dispatchEvent(new CustomEvent('open-chat-room', { detail: { room } }))
     }
 
     const createRoom = async () => {
@@ -424,6 +422,10 @@ export default {
           if (isSelf(m)) m.status = 'delivered'
           messages.value.push(m)
           nextTick(() => scrollToBottom())
+          // Broadcast to other components (ChatWindow)
+          window.dispatchEvent(new CustomEvent('chat-message-received', { 
+            detail: { roomId: selectedRoom.value?.id, message: m } 
+          }))
           // Auto-mark as read if it's from others and we're viewing this room
           if (!isSelf(m) && selectedRoom.value && m && selectedRoom.value.id) {
             // fire and forget; backend will broadcast read receipt
@@ -602,6 +604,18 @@ export default {
     let userCheckInterval = null
     let lastUserId = null
 
+    // Listen for messages from ChatWindow
+    const handleExternalMessage = (event) => {
+      if (selectedRoom.value && event.detail.roomId === selectedRoom.value.id) {
+        const msg = event.detail.message
+        // Only add if not already in list
+        if (!messages.value.find(m => m.id === msg.id)) {
+          messages.value.push(msg)
+          nextTick(() => scrollToBottom())
+        }
+      }
+    }
+
     onMounted(async () => {
       await loadCurrentUser()
       lastUserId = currentUserId.value
@@ -611,6 +625,8 @@ export default {
       
       // Listen for user change events
       window.addEventListener('user-changed', handleUserChange)
+      // Listen for messages from ChatWindow
+      window.addEventListener('chat-message-received', handleExternalMessage)
       
       // Poll every 2 seconds to detect user changes
       userCheckInterval = setInterval(() => {
@@ -656,8 +672,9 @@ export default {
       if (ws.value) {
         ws.value.close()
       }
-      // Remove event listener
+      // Remove event listeners
       window.removeEventListener('user-changed', handleUserChange)
+      window.removeEventListener('chat-message-received', handleExternalMessage)
       // Clear interval
       if (userCheckInterval) {
         clearInterval(userCheckInterval)

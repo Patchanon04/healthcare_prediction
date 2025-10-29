@@ -13,20 +13,33 @@
         <router-link 
           to="/dashboard" 
           class="block px-6 py-3 rounded-r-full hover:bg-white/10 transition text-[#00BCD4] bg-white border-2 border-transparent max-w-[200px]"
-          active-class="!text-orange-500 !border-orange-500"
         >
           <span class="font-semibold text-lg">Dashboard</span>
         </router-link>
 
         <router-link 
-          to="/patients" 
+          to="/patients"
           class="block px-6 py-3 rounded-r-full hover:bg-white/10 transition text-[#00BCD4] bg-white border-2 border-transparent max-w-[200px]"
           active-class="!text-orange-500 !border-orange-500"
         >
           <span class="font-semibold text-lg">Patient</span>
         </router-link>
 
-        
+        <router-link 
+          to="/chat"
+          class="block px-6 py-3 rounded-r-full hover:bg-white/10 transition text-[#00BCD4] bg-white border-2 border-transparent max-w-[200px]"
+          active-class="!text-orange-500 !border-orange-500"
+        >
+          <span class="font-semibold text-lg">Chat</span>
+        </router-link>
+
+        <router-link 
+          to="/diagnoses"
+          class="block px-6 py-3 rounded-r-full hover:bg-white/10 transition text-[#00BCD4] bg-white border-2 border-transparent max-w-[200px]"
+          active-class="!text-orange-500 !border-orange-500"
+        >
+          <span class="font-semibold text-lg">Diagnoses</span>
+        </router-link>
 
         <button 
           type="button"
@@ -366,6 +379,8 @@ export default {
     }, 30000)
     // Listen for messages marked as read
     window.addEventListener('messages-marked-read', this.handleMessagesRead)
+    // Listen for open chat room event from ChatView
+    window.addEventListener('open-chat-room', this.handleOpenChatRoom)
     // Close search on click outside
     document.addEventListener('click', this.handleClickOutside)
     // Restore open chat windows
@@ -398,6 +413,7 @@ export default {
       clearInterval(this.unreadInterval)
     }
     window.removeEventListener('messages-marked-read', this.handleMessagesRead)
+    window.removeEventListener('open-chat-room', this.handleOpenChatRoom)
     document.removeEventListener('click', this.handleClickOutside)
   },
   methods: {
@@ -435,6 +451,21 @@ export default {
       this.unreadCount = Math.max(0, this.unreadCount - count)
       // Reset seen flag so badge can show again if needed
       this.notificationsSeen = false
+    },
+    handleOpenChatRoom(event) {
+      const room = event.detail?.room
+      if (!room) return
+      
+      // Check if already open
+      const idx = this.openRooms.findIndex(r => String(r.id) === String(room.id))
+      if (idx !== -1) {
+        // Bring to front
+        const [existing] = this.openRooms.splice(idx, 1)
+        this.openRooms.push(existing)
+      } else {
+        // Add new
+        this.openRooms.push(room)
+      }
     },
     handleSearchInput() {
       clearTimeout(this.searchTimeout)
@@ -595,6 +626,65 @@ export default {
     },
     closeWindow(roomId) {
       this.openRooms = this.openRooms.filter(r => String(r.id) !== String(roomId))
+    },
+    async toggleNotifications() {
+      this.showNotifications = !this.showNotifications
+      if (this.showNotifications) {
+        await this.loadNotifications()
+        this.notificationsSeen = true
+      }
+    },
+    async loadNotifications() {
+      try {
+        this.loadingNotifications = true
+        const { listChatRooms } = await import('../services/api')
+        const data = await listChatRooms({ pageSize: 50 })
+        
+        const rooms = data.results || []
+        this.notifications = rooms
+          .filter(room => room.unread_count && room.unread_count > 0)
+          .map(room => {
+            let roomName = 'Chat'
+            if (room.name) {
+              roomName = room.name
+            } else if (room.members && Array.isArray(room.members)) {
+              roomName = room.members
+                .map(m => m.full_name || m.username || 'User')
+                .join(', ')
+            }
+            
+            return {
+              room_id: room.id,
+              room_name: roomName,
+              unread_count: room.unread_count,
+              last_message: room.last_message?.content || 'New message',
+              last_message_time: room.last_message?.created_at || room.updated_at || new Date().toISOString()
+            }
+          })
+          .sort((a, b) => new Date(b.last_message_time) - new Date(a.last_message_time))
+      } catch (e) {
+        console.error('❌ Failed to load notifications:', e)
+        this.notifications = []
+      } finally {
+        this.loadingNotifications = false
+      }
+    },
+    closeNotifications() {
+      this.showNotifications = false
+    },
+    formatNotifTime(timestamp) {
+      const date = new Date(timestamp)
+      const now = new Date()
+      const diff = now - date
+      const minutes = Math.floor(diff / (1000 * 60))
+      const hours = Math.floor(diff / (1000 * 60 * 60))
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      
+      if (minutes < 1) return 'Just now'
+      if (minutes < 60) return `${minutes}m ago`
+      if (hours < 24) return `${hours}h ago`
+      if (days < 7) return `${days}d ago`
+      return date.toLocaleDateString()
     },
     confirmLogout() {
       this.showLogoutModal = true
