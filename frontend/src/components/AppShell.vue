@@ -344,17 +344,27 @@ export default {
     // Restore open chat windows
     try {
       const saved = JSON.parse(localStorage.getItem('open_rooms') || '[]')
+      console.log(`🔄 Restoring open rooms from localStorage:`, saved)
       if (Array.isArray(saved) && saved.length) {
         import('../services/api').then(async ({ getChatRoom }) => {
           for (const id of saved) {
             try {
+              console.log(`🔄 Fetching room details for ${id}`)
               const room = await getChatRoom(id)
-              if (!this.openRooms.find(r => String(r.id) === String(room.id))) this.openRooms.push(room)
-            } catch {}
+              console.log(`🔄 Fetched room:`, room)
+              if (!this.openRooms.find(r => String(r.id) === String(room.id))) {
+                this.openRooms.push(room)
+                console.log(`🔄 Added room ${room.id} to openRooms`)
+              }
+            } catch (error) {
+              console.error(`❌ Failed to restore room ${id}:`, error)
+            }
           }
         })
       }
-    } catch {}
+    } catch (error) {
+      console.error(`❌ Failed to restore rooms:`, error)
+    }
   },
   beforeUnmount() {
     if (this.unreadInterval) {
@@ -506,23 +516,43 @@ export default {
     },
     async openChatWithUser(user) {
       try {
-        // Check if already open
-        const idx = this.openRooms.findIndex(r => (r.members||[]).some(m => String(m.id) === String(user.id)) && (r.members||[]).some(m => String(m.id) === String(this.profile?.id || this.userId)))
+        console.log(`🔍 Opening chat with user:`, user)
+        console.log(`🔍 Current open rooms:`, this.openRooms)
+        
+        // Check if already open - look for direct room with exactly this user and current user
+        const currentUserId = this.profile?.id || this.userId
+        const idx = this.openRooms.findIndex(r => {
+          if (r.room_type !== 'direct') return false
+          const members = r.members || []
+          const memberIds = members.map(m => String(m.id))
+          const hasUser = memberIds.includes(String(user.id))
+          const hasCurrentUser = memberIds.includes(String(currentUserId))
+          const isDirectChat = members.length === 2
+          console.log(`🔍 Room ${r.id}: hasUser=${hasUser}, hasCurrentUser=${hasCurrentUser}, isDirectChat=${isDirectChat}, memberIds=`, memberIds)
+          return hasUser && hasCurrentUser && isDirectChat
+        })
+        
         if (idx !== -1) {
+          console.log(`🔍 Found existing room at index ${idx}, bringing to front`)
           // bring to front by moving to end
           const [win] = this.openRooms.splice(idx, 1)
           this.openRooms.push(win)
           return
         }
+        
+        console.log(`🔍 No existing room found, creating new one`)
         // Create/find direct room
         const { createChatRoom } = await import('../services/api')
         const room = await createChatRoom({ room_type: 'direct', member_ids: [user.id], name: '' })
+        console.log(`🔍 Created/found room:`, room)
+        
         // Append if not open
         if (!this.openRooms.find(r => String(r.id) === String(room.id))) {
           this.openRooms.push(room)
+          console.log(`🔍 Added room to openRooms`)
         }
       } catch (e) {
-        // swallow
+        console.error(`❌ Error opening chat with user:`, e)
       }
     },
     closeWindow(roomId) {

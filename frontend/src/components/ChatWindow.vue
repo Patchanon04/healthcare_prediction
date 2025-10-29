@@ -35,7 +35,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { listMessages, markMessagesRead } from '../services/api'
 
 export default {
@@ -57,12 +57,15 @@ export default {
       if (!m || !m.sender) return false
       const senderId = m.sender.id || m.sender
       const currentId = props.currentUserId
-      console.log(`🔍 isSelf check: senderId=${senderId}, currentId=${currentId}, result=${String(senderId) === String(currentId)}`)
-      return String(senderId) === String(currentId)
+      const result = String(senderId) === String(currentId)
+      if (!result) {
+        console.log(`🔍 isSelf check: senderId=${senderId}, currentId=${currentId}, result=${result}`)
+      }
+      return result
     }
 
     // Title: for direct chat show only counterpart name, for group fall back to room.name or members (excluding self)
-    const computeTitle = () => {
+    const roomTitle = computed(() => {
       const allMembers = props.room.members || []
       const others = allMembers.filter(m => String(m.id) !== String(props.currentUserId))
       console.log(`🏷️ Title computation: currentUserId=${props.currentUserId}, allMembers=`, allMembers, 'others=', others)
@@ -80,8 +83,7 @@ export default {
       const groupTitle = others.map(m => m.full_name || m.username).join(', ')
       console.log(`🏷️ Group chat title: ${groupTitle}`)
       return groupTitle
-    }
-    const roomTitle = computeTitle()
+    })
     const roomAvatar = null
 
     const scrollToBottom = () => { if (messagesEl.value) messagesEl.value.scrollTop = messagesEl.value.scrollHeight }
