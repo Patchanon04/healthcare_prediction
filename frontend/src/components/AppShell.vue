@@ -382,12 +382,42 @@ export default {
     document.removeEventListener('click', this.handleClickOutside)
   },
   methods: {
-    loadProfile() {
-      userStore.fetchProfile().catch(e => {
-        // token invalid, redirect to login
+    async loadProfile() {
+      try {
+        const profile = await userStore.fetchProfile()
+        if (profile?.id) {
+          this.userId = profile.id
+          try { localStorage.setItem('user', JSON.stringify({ id: profile.id })) } catch {}
+        }
+        return profile
+      } catch (e) {
         localStorage.removeItem('token')
         window.location.href = '/login'
-      })
+        throw e
+      }
+    },
+    async ensureCurrentUserId() {
+      if (this.profile?.id) {
+        this.userId = this.profile.id
+        return this.userId
+      }
+      if (this.userId) return this.userId
+      try {
+        const cached = localStorage.getItem('user')
+        if (cached) {
+          const parsed = JSON.parse(cached)
+          if (parsed?.id) {
+            this.userId = parsed.id
+            return this.userId
+          }
+        }
+      } catch {}
+      const profile = await this.loadProfile().catch(() => null)
+      if (profile?.id) {
+        this.userId = profile.id
+        return this.userId
+      }
+      return null
     },
     async fetchUnreadCount() {
       try {
@@ -524,7 +554,11 @@ export default {
     },
     async openChatWithUser(user) {
       try {
-        const currentId = String(this.profile?.id || this.userId || '')
+        let currentId = String(this.profile?.id || this.userId || '')
+        if (!currentId) {
+          const ensured = await this.ensureCurrentUserId()
+          currentId = ensured ? String(ensured) : ''
+        }
         if (!currentId) {
           console.warn('⚠️ Cannot open chat: current user id missing')
           return
