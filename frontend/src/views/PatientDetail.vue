@@ -285,6 +285,23 @@ export default {
 
     const fetchPatient = async () => {
       loadingPatient.value = true
+      try {
+        const data = await getPatient(routeId)
+        patient.value = data
+        editForm.value = {
+          full_name: data.full_name || '',
+          phone: data.phone || '',
+          age: data.age || null,
+          gender: data.gender || '',
+          notes: data.notes || '',
+        }
+      } catch (e) {
+        toast.error('Failed to load patient')
+      } finally {
+        loadingPatient.value = false
+      }
+    }
+
     const fetchTransactions = async () => {
       loadingTx.value = true
       try {
