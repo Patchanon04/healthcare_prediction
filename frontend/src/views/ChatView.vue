@@ -300,7 +300,9 @@ export default {
     }
 
     const selectRoom = async (room) => {
-      // Mark messages as read before opening
+      console.log(`🔍 Selecting room: ${room.id}`)
+      
+      // Mark messages as read before opening floating panel
       if (room.unread_count > 0) {
         try {
           const unreadMessages = await listMessages(room.id, { pageSize: 100 })
@@ -330,6 +332,7 @@ export default {
       }
       
       // Open floating panel
+      console.log(`🚀 Opening floating panel for room ${room.id}`)
       window.dispatchEvent(new CustomEvent('open-chat-room', { detail: { room } }))
     }
 
@@ -680,19 +683,25 @@ export default {
       // Auto-select room from query param if present
       if (route.query.room) {
         const roomId = route.query.room
+        console.log(`🔍 Auto-selecting room from query param: ${roomId}`)
         const room = rooms.value.find(r => String(r.id) === String(roomId))
         if (room) {
-          selectRoom(room)
+          console.log(`✅ Found room, calling selectRoom()`)
+          await selectRoom(room)
+        } else {
+          console.warn(`⚠️ Room ${roomId} not found in rooms list`)
         }
       }
     })
 
     // Watch for query param changes (e.g., when clicking notification)
-    watch(() => route.query.room, (newRoomId) => {
+    watch(() => route.query.room, async (newRoomId) => {
       if (newRoomId) {
+        console.log(`🔍 Query param changed to room: ${newRoomId}`)
         const room = rooms.value.find(r => String(r.id) === String(newRoomId))
         if (room) {
-          selectRoom(room)
+          console.log(`✅ Found room in watch, calling selectRoom()`)
+          await selectRoom(room)
         }
       }
     })

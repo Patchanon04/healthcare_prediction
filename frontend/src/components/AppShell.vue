@@ -433,16 +433,26 @@ export default {
         const { getUnreadCount } = await import('../services/api')
         const data = await getUnreadCount()
         const newCount = data.unread_count || 0
+        const oldCount = this.unreadCount
         
-        // Only update if notifications haven't been seen, or if count increased
-        if (!this.notificationsSeen || newCount > this.unreadCount) {
-          this.unreadCount = newCount
-          if (newCount > this.unreadCount) {
-            this.notificationsSeen = false // New messages arrived
-          }
+        console.log(`📊 Unread count: ${oldCount} → ${newCount}`)
+        
+        // Always update the count
+        this.unreadCount = newCount
+        
+        // If count increased, show badge again
+        if (newCount > oldCount) {
+          this.notificationsSeen = false
+          console.log('🔔 New messages arrived, showing badge')
+        }
+        
+        // If count is 0, mark as seen
+        if (newCount === 0) {
+          this.notificationsSeen = true
+          console.log('✅ No unread messages, hiding badge')
         }
       } catch (e) {
-        // Silently fail
+        console.error('❌ Failed to fetch unread count:', e)
       }
     },
     handleMessagesRead(event) {
@@ -714,10 +724,11 @@ export default {
     },
     closeNotifications() {
       this.showNotifications = false
-      // Refresh unread count after closing notifications
+      // Refresh unread count after a longer delay to allow messages to be marked as read
       setTimeout(() => {
+        console.log('🔄 Refreshing unread count after closing notifications...')
         this.fetchUnreadCount()
-      }, 500)
+      }, 1500) // เพิ่มเป็น 1.5 วินาที
     },
     formatNotifTime(timestamp) {
       const date = new Date(timestamp)
