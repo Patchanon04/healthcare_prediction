@@ -155,7 +155,16 @@ export default {
         await nextTick(); scrollToBottom()
         // mark read
         const unread = messages.value.filter(m => !m.is_read && String(m.sender?.id) !== String(props.currentUserId)).map(m => m.id)
-        if (unread.length) markMessagesRead(props.room.id, unread).catch(()=>{})
+        if (unread.length) {
+          console.log(`✅ ChatWindow: Marking ${unread.length} messages as read`)
+          markMessagesRead(props.room.id, unread)
+            .then(() => {
+              // Notify AppShell to refresh unread count
+              console.log(`📤 ChatWindow: Dispatching messages-marked-read event (count: ${unread.length})`)
+              window.dispatchEvent(new CustomEvent('messages-marked-read', { detail: { count: unread.length } }))
+            })
+            .catch(() => {})
+        }
       } catch (error) {
         console.error(`❌ Failed to load messages for room ${props.room.id}:`, error)
       }

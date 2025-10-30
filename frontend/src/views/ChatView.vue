@@ -309,7 +309,9 @@ export default {
             .map(m => m.id)
           
           if (unreadIds.length > 0) {
+            console.log(`✅ Marking ${unreadIds.length} messages as read in room ${room.id}`)
             await markMessagesRead(room.id, unreadIds)
+            
             // Update local room list - force reactivity
             const roomIdx = rooms.value.findIndex(r => String(r.id) === String(room.id))
             if (roomIdx !== -1) {
@@ -317,7 +319,9 @@ export default {
                 idx === roomIdx ? { ...r, unread_count: 0 } : r
               )
             }
+            
             // Notify AppShell to refresh unread count
+            console.log(`📤 Dispatching messages-marked-read event (count: ${unreadIds.length})`)
             window.dispatchEvent(new CustomEvent('messages-marked-read', { detail: { count: unreadIds.length } }))
           }
         } catch (e) {

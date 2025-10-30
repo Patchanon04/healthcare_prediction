@@ -446,9 +446,9 @@ export default {
       }
     },
     handleMessagesRead(event) {
-      // Decrement unread count when messages are marked as read
-      const count = event.detail?.count || 0
-      this.unreadCount = Math.max(0, this.unreadCount - count)
+      // Refresh unread count from server to ensure accuracy
+      console.log('📬 Messages marked as read, refreshing unread count...')
+      this.fetchUnreadCount()
       // Reset seen flag so badge can show again if needed
       this.notificationsSeen = false
     },
