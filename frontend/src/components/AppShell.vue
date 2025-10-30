@@ -427,7 +427,20 @@ export default {
         window.__globalChatState.restored = true
       }
     } else {
-      console.log(`⏭️ Skipping restore - rooms already restored in this session`)
+      // Already restored, but sync with localStorage in case user closed panels
+      try {
+        const saved = JSON.parse(localStorage.getItem('open_rooms') || '[]')
+        const savedIds = new Set(saved)
+        
+        // Remove rooms that are not in localStorage (user closed them)
+        window.__globalChatState.openRooms = window.__globalChatState.openRooms.filter(room => 
+          savedIds.has(room.id)
+        )
+        
+        console.log(`⏭️ Skipping restore - synced with localStorage (${window.__globalChatState.openRooms.length} rooms)`)
+      } catch (error) {
+        console.error('Failed to sync with localStorage:', error)
+      }
     }
   },
   beforeUnmount() {
