@@ -72,92 +72,114 @@
         </div>
       </div>
 
-      <!-- Selected Date Appointments -->
-      <div v-if="selectedDate" class="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <h3 class="text-xl font-bold text-[#2C597D] mb-4">
-          Appointments for {{ formatSelectedDate }}
-        </h3>
+      <!-- Day Appointments Modal -->
+      <div v-if="showDayModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="closeDayModal">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden">
+          <!-- Modal Header -->
+          <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-[#00BCD4] to-[#00ACC1]">
+            <div>
+              <h2 class="text-2xl font-bold text-white">
+                {{ formatSelectedDate }}
+              </h2>
+              <p class="text-white/80 mt-1">
+                {{ selectedDateAppointments.length }} {{ selectedDateAppointments.length === 1 ? 'appointment' : 'appointments' }}
+              </p>
+            </div>
+            <button @click="closeDayModal" class="text-white hover:bg-white/20 p-2 rounded-lg transition">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
 
-        <div v-if="selectedDateAppointments.length === 0" class="text-center py-8">
-          <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-          </svg>
-          <p class="text-gray-500">No appointments on this date</p>
-          <button 
-            @click="showAddModal = true"
-            class="mt-3 text-[#00BCD4] hover:underline font-semibold"
-          >
-            Add an appointment
-          </button>
-        </div>
+          <!-- Modal Body -->
+          <div class="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+            <div v-if="selectedDateAppointments.length === 0" class="text-center py-12">
+              <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <p class="text-gray-500 text-lg mb-4">No appointments on this date</p>
+              <button 
+                @click="showAddModal = true; closeDayModal()"
+                class="bg-gradient-to-r from-[#00BCD4] to-[#00ACC1] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition"
+              >
+                Add an appointment
+              </button>
+            </div>
 
-        <div v-else class="space-y-3">
-          <div 
-            v-for="appointment in selectedDateAppointments" 
-            :key="appointment.id"
-            class="border-2 border-gray-200 rounded-xl p-4 hover:border-[#00BCD4] transition"
-          >
-            <div class="flex items-center justify-between">
-              <!-- Left: Patient Info & Time -->
-              <div class="flex items-center gap-4 flex-1">
-                <router-link 
-                  :to="`/patients/${appointment.patient_id}`"
-                  class="w-12 h-12 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] flex items-center justify-center text-white text-xl font-bold flex-shrink-0 hover:scale-110 transition"
-                >
-                  {{ appointment.patient_name.charAt(0).toUpperCase() }}
-                </router-link>
-                <div class="flex-1">
-                  <router-link 
-                    :to="`/patients/${appointment.patient_id}`"
-                    class="text-lg font-semibold text-[#2C597D] hover:text-[#00BCD4] transition"
-                  >
-                    {{ appointment.patient_name }}
-                  </router-link>
-                  <p class="text-sm text-gray-500">MRN: {{ appointment.patient_mrn }}</p>
-                  <p class="text-sm text-gray-600 mt-1">{{ appointment.reason || 'No reason specified' }}</p>
-                </div>
-              </div>
-
-              <!-- Right: Time & Actions -->
-              <div class="flex items-center gap-4">
-                <div class="text-right">
-                  <div class="flex items-center gap-2 text-[#2C597D] font-bold text-lg">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    {{ formatTime(appointment.appointment_date) }}
+            <div v-else class="space-y-4">
+              <div 
+                v-for="appointment in selectedDateAppointments" 
+                :key="appointment.id"
+                class="border-2 border-gray-200 rounded-xl p-5 hover:border-[#00BCD4] hover:shadow-md transition"
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <!-- Left: Time Badge -->
+                  <div class="flex-shrink-0">
+                    <div class="bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] text-white rounded-xl p-3 text-center min-w-[80px]">
+                      <div class="text-2xl font-bold">{{ formatTime(appointment.appointment_date) }}</div>
+                      <div class="text-xs opacity-90 mt-1">{{ appointment.duration_minutes }} min</div>
+                    </div>
                   </div>
-                  <p class="text-sm text-gray-500 mt-1">{{ appointment.duration_minutes }} minutes</p>
-                  <span 
-                    :class="[
-                      'inline-block px-3 py-1 rounded-full text-xs font-semibold mt-2',
-                      getStatusClass(appointment.status)
-                    ]"
-                  >
-                    {{ getStatusLabel(appointment.status) }}
-                  </span>
-                </div>
 
-                <!-- Actions -->
-                <div class="flex gap-2">
-                  <button 
-                    @click="editAppointment(appointment)"
-                    class="p-2 text-[#00BCD4] hover:bg-[#00BCD4]/10 rounded-lg transition"
-                    title="Edit"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                  </button>
-                  <button 
-                    @click="deleteAppointment(appointment.id)"
-                    class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
-                    title="Delete"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                  </button>
+                  <!-- Middle: Patient Info -->
+                  <div class="flex-1">
+                    <div class="flex items-start gap-3">
+                      <router-link 
+                        :to="`/patients/${appointment.patient_id}`"
+                        @click="closeDayModal"
+                        class="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 hover:scale-110 transition"
+                      >
+                        {{ appointment.patient_name.charAt(0).toUpperCase() }}
+                      </router-link>
+                      <div class="flex-1">
+                        <router-link 
+                          :to="`/patients/${appointment.patient_id}`"
+                          @click="closeDayModal"
+                          class="text-xl font-bold text-[#2C597D] hover:text-[#00BCD4] transition block"
+                        >
+                          {{ appointment.patient_name }}
+                        </router-link>
+                        <p class="text-sm text-gray-500">MRN: {{ appointment.patient_mrn }}</p>
+                        <div class="mt-2 flex items-start gap-2">
+                          <svg class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                          </svg>
+                          <p class="text-sm text-gray-600">{{ appointment.reason || 'No reason specified' }}</p>
+                        </div>
+                        <span 
+                          :class="[
+                            'inline-block px-3 py-1 rounded-full text-xs font-semibold mt-3',
+                            getStatusClass(appointment.status)
+                          ]"
+                        >
+                          {{ getStatusLabel(appointment.status) }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Right: Actions -->
+                  <div class="flex gap-2 flex-shrink-0">
+                    <button 
+                      @click="editAppointment(appointment); closeDayModal()"
+                      class="p-2 text-[#00BCD4] hover:bg-[#00BCD4]/10 rounded-lg transition"
+                      title="Edit"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                    </button>
+                    <button 
+                      @click="deleteAppointment(appointment.id)"
+                      class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                      title="Delete"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -305,6 +327,7 @@ export default {
     const loading = ref(false)
     const saving = ref(false)
     const showAddModal = ref(false)
+    const showDayModal = ref(false)
     const editingAppointment = ref(null)
     const appointments = ref([])
     const patients = ref([])
@@ -427,6 +450,11 @@ export default {
     const selectDate = (day) => {
       if (!day.isCurrentMonth) return
       selectedDate.value = day.date
+      showDayModal.value = true
+    }
+
+    const closeDayModal = () => {
+      showDayModal.value = false
     }
 
     const fetchAppointments = async () => {
@@ -486,12 +514,8 @@ export default {
           }
         ]
         
-        // Auto-select today if it has appointments
-        const todayStr = today.toISOString().split('T')[0]
-        const todayAppointments = appointments.value.filter(a => a.appointment_date.startsWith(todayStr))
-        if (todayAppointments.length > 0) {
-          selectedDate.value = todayStr
-        }
+        // Don't auto-select, let user click on a day
+      
       } catch (e) {
         toast.error('Failed to load appointments')
       } finally {
@@ -644,6 +668,7 @@ export default {
       loading,
       saving,
       showAddModal,
+      showDayModal,
       editingAppointment,
       appointments,
       patients,
@@ -657,6 +682,7 @@ export default {
       previousMonth,
       nextMonth,
       selectDate,
+      closeDayModal,
       formatDate,
       formatTime,
       getStatusClass,
