@@ -58,11 +58,32 @@
         <div class="space-y-3">
           <div>
             <label class="block text-sm text-gray-600 mb-1">Full name <span class="text-red-500">*</span></label>
-            <input v-model="form.full_name" type="text" placeholder="Full name" class="w-full border rounded px-3 py-2" required />
-          </div>
-          <div>
-            <label class="block text-sm text-gray-600 mb-1">MRN <span class="text-red-500">*</span></label>
-            <input v-model="form.mrn" type="text" placeholder="Medical Record Number" class="w-full border rounded px-3 py-2" required />
+            <input 
+              v-model="form.full_name"
+              @input="checkNameDuplicate"
+              type="text" 
+              placeholder="Full name" 
+              class="w-full border rounded px-3 py-2"
+              required 
+            />
+            <div v-if="duplicateMatches.length" class="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+              <p class="font-semibold mb-1">Similar names found:</p>
+              <ul class="space-y-1">
+                <li v-for="match in duplicateMatches" :key="match.id" class="flex justify-between items-center">
+                  <span>
+                    {{ match.full_name }}
+                    <span v-if="match.mrn" class="text-xs text-gray-500">• MRN {{ match.mrn }}</span>
+                  </span>
+                  <router-link 
+                    :to="{ name: 'PatientDetail', params: { id: match.id } }" 
+                    class="text-[#00ACC1] hover:underline"
+                  >
+                    View
+                  </router-link>
+                </li>
+              </ul>
+              <p class="mt-2 text-xs text-yellow-700">You can continue creating if this is a different patient.</p>
+            </div>
           </div>
           <div class="flex gap-3">
             <div class="w-1/2">
@@ -125,7 +146,8 @@ export default {
 
     const showCreate = ref(false)
     const submitting = ref(false)
-    const form = ref({ full_name: '', mrn: '', phone: '', age: null, gender: '', notes: '' })
+    const form = ref({ full_name: '', phone: '', age: null, gender: '', notes: '' })
+    const duplicateMatches = ref([])
 
     const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / pageSize.value)))
 
@@ -138,6 +160,16 @@ export default {
       } finally {
         isLoading.value = false
       }
+    }
+
+    const checkNameDuplicate = () => {
+      const name = form.value.full_name.trim().toLowerCase()
+      if (!name) {
+        duplicateMatches.value = []
+        return
+      }
+      duplicateMatches.value = patients.value
+        .filter(p => p.full_name?.trim().toLowerCase() === name)
     }
 
     const go = (p) => {
@@ -157,12 +189,13 @@ export default {
     const create = async () => {
       submitting.value = true
       try {
-        if (!form.value.full_name || !form.value.mrn || !form.value.age || !form.value.gender) {
-          throw new Error('Please fill required fields: Full name, MRN, Age, and Gender')
+        if (!form.value.full_name || !form.value.age || !form.value.gender) {
+          throw new Error('Please fill required fields: Full name, Age, and Gender')
         }
         await createPatient(form.value)
         showCreate.value = false
-        form.value = { full_name: '', mrn: '', phone: '', age: null, gender: '', notes: '' }
+        form.value = { full_name: '', phone: '', age: null, gender: '', notes: '' }
+        duplicateMatches.value = []
         page.value = 1
         fetchPatients()
       } catch (e) {
@@ -174,7 +207,7 @@ export default {
 
     onMounted(fetchPatients)
 
-    return { pageTitle, search, patients, isLoading, page, pageSize, totalCount, totalPages, fetchPatients, clearSearch, go, showCreate, form, create, submitting, genderLabel }
+    return { pageTitle, search, patients, isLoading, page, pageSize, totalCount, totalPages, fetchPatients, clearSearch, go, showCreate, form, create, submitting, genderLabel, duplicateMatches, checkNameDuplicate }
   }
 }
 </script>

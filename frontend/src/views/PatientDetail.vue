@@ -176,8 +176,8 @@
             <input v-model="editForm.full_name" type="text" class="w-full border rounded px-3 py-2" />
           </div>
           <div>
-            <label class="block text-sm text-gray-600 mb-1">MRN <span class="text-red-500">*</span></label>
-            <input v-model="editForm.mrn" type="text" class="w-full border rounded px-3 py-2" />
+            <label class="block text-sm text-gray-600 mb-1">MRN</label>
+            <input :value="patient?.mrn" type="text" class="w-full border rounded px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed" disabled />
           </div>
           <div class="flex gap-3">
             <div class="w-1/2">
@@ -243,7 +243,7 @@ export default {
     const showEdit = ref(false)
     const activeTab = ref('history')
     const savingEdit = ref(false)
-    const editForm = ref({ full_name: '', mrn: '', phone: '', age: null, gender: '', notes: '' })
+    const editForm = ref({ full_name: '', phone: '', age: null, gender: '', notes: '' })
 
     const page = ref(1)
     const pageSize = ref(10)
@@ -267,8 +267,8 @@ export default {
 
     const saveEdit = async () => {
       try {
-        if (!editForm.value.full_name || !editForm.value.mrn || !editForm.value.age || !editForm.value.gender) {
-          toast.error('Please fill required fields: Full name, MRN, Age, Gender')
+        if (!editForm.value.full_name || !editForm.value.age || !editForm.value.gender) {
+          toast.error('Please fill required fields: Full name, Age, Gender')
           return
         }
         savingEdit.value = true
@@ -285,22 +285,6 @@ export default {
 
     const fetchPatient = async () => {
       loadingPatient.value = true
-      try {
-        patient.value = await getPatient(routeId)
-        // sync edit form
-        editForm.value = {
-          full_name: patient.value.full_name || '',
-          mrn: patient.value.mrn || '',
-          phone: patient.value.phone || '',
-          age: patient.value.age ?? null,
-          gender: patient.value.gender || '',
-          notes: patient.value.notes || ''
-        }
-      } finally {
-        loadingPatient.value = false
-      }
-    }
-
     const fetchTransactions = async () => {
       loadingTx.value = true
       try {

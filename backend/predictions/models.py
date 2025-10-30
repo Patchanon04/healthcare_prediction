@@ -2,8 +2,9 @@
 Database models for medical diagnosis predictions.
 """
 import uuid
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class UserProfile(models.Model):
@@ -41,7 +42,13 @@ class Patient(models.Model):
     # Using auto-increment integer ID for simplicity
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='patients', help_text="User who created this patient")
     full_name = models.CharField(max_length=255)
-    mrn = models.CharField(max_length=100, help_text="Medical Record Number", db_index=True)
+    mrn = models.CharField(
+        max_length=32,
+        unique=True,
+        editable=False,
+        help_text="Medical Record Number",
+        db_index=True,
+    )
     phone = models.CharField(max_length=20, blank=True, default='', help_text="Patient phone number", db_index=True)
     age = models.PositiveIntegerField()
     gender = models.CharField(max_length=1, choices=[('M', 'Male'), ('F', 'Female'), ('O', 'Other')])
@@ -57,8 +64,38 @@ class Patient(models.Model):
             models.Index(fields=['phone'], name='patient_phone_idx'),
         ]
 
+    def save(self, *args, **kwargs):
+        if not self.mrn:
+            self.mrn = generate_mrn()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.full_name} ({self.mrn})"
+
+
+def generate_mrn():
+    """
+    Generate a unique, year-prefixed MRN with an 8-digit counter.
+    Example: MRN202500000001
+    """
+    prefix = f"MRN{timezone.now().year}"
+
+    with transaction.atomic():
+        last_record = (
+            Patient.objects
+            .select_for_update()
+            .filter(mrn__startswith=prefix)
+            .order_by('-mrn')
+            .first()
+        )
+
+        if last_record:
+            suffix = last_record.mrn[len(prefix):]
+            next_number = int(suffix) + 1 if suffix.isdigit() else 1
+        else:
+            next_number = 1
+
+        return f"{prefix}{next_number:08d}"
 
 
 class Transaction(models.Model):
