@@ -300,6 +300,14 @@ import { userStore } from '../store/user'
 import ContactsPanel from './ContactsPanel.vue'
 import ChatWindow from './ChatWindow.vue'
 
+// Global state for floating chat windows (persists across route changes)
+if (!window.__globalChatState) {
+  window.__globalChatState = {
+    openRooms: [],
+    restored: false
+  }
+}
+
 export default {
   props: {
     title: { type: String, default: '' },
@@ -326,8 +334,8 @@ export default {
       notifications: [],
       loadingNotifications: false,
       notificationsSeen: false, // Track if user has seen notifications
-      // Floating chat windows state (will be restored in mounted)
-      openRooms: [],
+      // Floating chat windows state (use global state to persist across route changes)
+      openRooms: window.__globalChatState.openRooms,
       restoringRooms: false,
       userId: (() => {
         try {
@@ -384,31 +392,42 @@ export default {
     window.addEventListener('open-chat-room', this.handleOpenChatRoom)
     // Close search on click outside
     document.addEventListener('click', this.handleClickOutside)
-    // Restore open chat windows
-    try {
-      const saved = JSON.parse(localStorage.getItem('open_rooms') || '[]')
-      console.log(`🔄 Restoring ${saved.length} open rooms from localStorage:`, saved)
-      if (Array.isArray(saved) && saved.length) {
-        this.restoringRooms = true
-        import('../services/api').then(async ({ getChatRoom }) => {
-          for (const id of saved) {
-            try {
-              console.log(`🔄 Fetching room details for ${id}`)
-              const room = await getChatRoom(id)
-              console.log(`✅ Restored room: ${room.name || room.id}`)
-              if (!this.openRooms.find(r => String(r.id) === String(room.id))) {
-                this.openRooms.push(room)
+    
+    // Restore open chat windows ONLY if not already restored
+    // Use global state to prevent re-restoring on every route change
+    if (!window.__globalChatState.restored) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('open_rooms') || '[]')
+        console.log(`🔄 Restoring ${saved.length} open rooms from localStorage:`, saved)
+        if (Array.isArray(saved) && saved.length) {
+          this.restoringRooms = true
+          window.__globalChatState.restored = true // Mark as restored
+          
+          import('../services/api').then(async ({ getChatRoom }) => {
+            for (const id of saved) {
+              try {
+                console.log(`🔄 Fetching room details for ${id}`)
+                const room = await getChatRoom(id)
+                console.log(`✅ Restored room: ${room.name || room.id}`)
+                if (!window.__globalChatState.openRooms.find(r => String(r.id) === String(room.id))) {
+                  window.__globalChatState.openRooms.push(room)
+                }
+              } catch (error) {
+                console.error(`❌ Failed to restore room ${id}:`, error)
               }
-            } catch (error) {
-              console.error(`❌ Failed to restore room ${id}:`, error)
             }
-          }
-          this.restoringRooms = false
-          console.log(`✅ Finished restoring ${this.openRooms.length} rooms`)
-        })
+            this.restoringRooms = false
+            console.log(`✅ Finished restoring ${window.__globalChatState.openRooms.length} rooms`)
+          })
+        } else {
+          window.__globalChatState.restored = true // No rooms to restore
+        }
+      } catch (error) {
+        console.error(`❌ Failed to restore rooms:`, error)
+        window.__globalChatState.restored = true
       }
-    } catch (error) {
-      console.error(`❌ Failed to restore rooms:`, error)
+    } else {
+      console.log(`⏭️ Skipping restore - rooms already restored in this session`)
     }
   },
   beforeUnmount() {
