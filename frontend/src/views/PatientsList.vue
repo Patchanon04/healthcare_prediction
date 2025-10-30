@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <AppShell :title="pageTitle">
     <div class="flex items-center justify-between mb-4">
       <div class="flex gap-2">
         <input v-model="search" @keyup.enter="fetchPatients" type="text" placeholder="Search name / MRN / phone" class="border rounded-lg px-3 py-2 w-72" />
@@ -99,17 +99,18 @@
         </div>
       </div>
     </div>
-  </div>
+  </AppShell>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import AppShell from '../components/AppShell.vue'
 import { listPatients, createPatient } from '../services/api'
 
 export default {
   name: 'PatientsList',
-  components: {},
+  components: { AppShell },
   setup() {
     const route = useRoute()
     const isHistoryMode = computed(() => !!route.meta?.historyMode)

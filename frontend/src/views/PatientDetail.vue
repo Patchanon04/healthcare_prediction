@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <AppShell :title="patient?.full_name || 'Patient'">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Patient Info -->
       <div class="bg-white rounded-xl shadow p-6 lg:col-span-1">
@@ -104,7 +104,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </AppShell>
   
   <!-- Result Modal -->
   <transition name="modal">
@@ -222,13 +222,14 @@
 <script>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
+import AppShell from '../components/AppShell.vue'
 import UploadForm from '../components/UploadForm.vue'
 import TreatmentManagement from '../components/TreatmentManagement.vue'
 import { getPatient, getPatientTransactions, updatePatient } from '../services/api'
 
 export default {
   name: 'PatientDetail',
-  components: { UploadForm, TreatmentManagement },
+  components: { AppShell, UploadForm, TreatmentManagement },
   setup(props, { attrs, root }) {
     const toast = useToast()
     const showResult = ref(false)
