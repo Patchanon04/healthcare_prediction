@@ -299,8 +299,33 @@ export default {
       }
     }
 
-    const selectRoom = (room) => {
-      // Instead of showing in ChatView, emit event to open floating panel
+    const selectRoom = async (room) => {
+      // Mark messages as read before opening
+      if (room.unread_count > 0) {
+        try {
+          const unreadMessages = await listMessages(room.id, { pageSize: 100 })
+          const unreadIds = unreadMessages.results
+            .filter(m => !m.is_read && String(m.sender.id) !== String(currentUserId.value))
+            .map(m => m.id)
+          
+          if (unreadIds.length > 0) {
+            await markMessagesRead(room.id, unreadIds)
+            // Update local room list - force reactivity
+            const roomIdx = rooms.value.findIndex(r => String(r.id) === String(room.id))
+            if (roomIdx !== -1) {
+              rooms.value = rooms.value.map((r, idx) => 
+                idx === roomIdx ? { ...r, unread_count: 0 } : r
+              )
+            }
+            // Notify AppShell to refresh unread count
+            window.dispatchEvent(new CustomEvent('messages-marked-read', { detail: { count: unreadIds.length } }))
+          }
+        } catch (e) {
+          console.error('Failed to mark messages as read:', e)
+        }
+      }
+      
+      // Open floating panel
       window.dispatchEvent(new CustomEvent('open-chat-room', { detail: { room } }))
     }
 

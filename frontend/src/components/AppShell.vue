@@ -714,6 +714,10 @@ export default {
     },
     closeNotifications() {
       this.showNotifications = false
+      // Refresh unread count after closing notifications
+      setTimeout(() => {
+        this.fetchUnreadCount()
+      }, 500)
     },
     formatNotifTime(timestamp) {
       const date = new Date(timestamp)
