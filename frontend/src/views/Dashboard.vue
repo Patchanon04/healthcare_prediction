@@ -1,6 +1,5 @@
 <template>
-  <AppShell title="Dashboard">
-    <div class="space-y-6">
+  <div class="space-y-6">
       <!-- Date Range Filter + Export -->
       <div class="bg-white rounded-xl shadow p-5">
         <div class="flex flex-wrap items-end gap-4">
@@ -63,18 +62,17 @@
         </button>
       </template>
     </Modal>
-  </AppShell>
+  </div>
 </template>
 
 <script>
 import { ref, onMounted, computed } from 'vue'
-import AppShell from '../components/AppShell.vue'
 import Modal from '../components/Modal.vue'
 import { getReportSummary } from '../services/api'
 
 export default {
   name: 'Dashboard',
-  components: { AppShell, Modal },
+  components: { Modal },
   setup() {
     const reportData = ref(null)
     const startDate = ref('')

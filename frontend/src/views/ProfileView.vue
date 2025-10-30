@@ -1,5 +1,5 @@
 <template>
-  <AppShell title="Profile">
+  <div>
     <div class="max-w-4xl mx-auto">
       <div class="bg-white rounded-2xl shadow-lg p-8">
         <!-- Profile Header -->
@@ -122,19 +122,18 @@
         </form>
       </div>
     </div>
-  </AppShell>
+  </div>
 </template>
 
 <script>
 import { ref, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
-import AppShell from '../components/AppShell.vue'
 import { updateProfile } from '../services/api'
 import { userStore } from '../store/user'
 
 export default {
   name: 'ProfileView',
-  components: { AppShell },
+  components: {},
   setup() {
     const toast = useToast()
     const loading = ref(false)

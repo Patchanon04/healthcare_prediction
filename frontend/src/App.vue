@@ -1,5 +1,13 @@
 <template>
-  <router-view />
+  <div v-if="isPublicRoute">
+    <!-- Public routes (login) without AppShell -->
+    <router-view />
+  </div>
+  <AppShell v-else :title="currentTitle">
+    <!-- Protected routes with AppShell -->
+    <router-view />
+  </AppShell>
+  
   <footer class="bg-white shadow-inner mt-16">
     <div class="container mx-auto px-4 py-6 text-center text-[#2C597D]">
       <p class="text-sm">© 2025 OPEN BRAIN Medical Diagnosis System | Built with Vue.js, Django, FastAPI</p>
@@ -9,8 +17,29 @@
 </template>
 
 <script>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import AppShell from './components/AppShell.vue'
+
 export default {
-  name: 'App'
+  name: 'App',
+  components: { AppShell },
+  setup() {
+    const route = useRoute()
+    
+    const isPublicRoute = computed(() => {
+      return route.meta?.public === true
+    })
+    
+    const currentTitle = computed(() => {
+      return route.meta?.title || ''
+    })
+    
+    return {
+      isPublicRoute,
+      currentTitle
+    }
+  }
 }
 </script>
 

@@ -1,5 +1,5 @@
 <template>
-  <AppShell title="Chat">
+  <div>
     <div class="flex h-[calc(100vh-120px)] bg-gray-50 rounded-xl shadow overflow-hidden">
       <!-- Left Sidebar: Room List -->
       <div class="w-80 bg-white border-r flex flex-col">
@@ -200,19 +200,18 @@
         </button>
       </template>
     </Modal>
-  </AppShell>
+  </div>
 </template>
 
 <script>
 import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import AppShell from '../components/AppShell.vue'
 import Modal from '../components/Modal.vue'
 import { listChatRooms, listChatUsers, createChatRoom, listMessages, markMessagesRead, getProfile } from '../services/api'
 
 export default {
   name: 'ChatView',
-  components: { AppShell, Modal },
+  components: { Modal },
   setup() {
     const route = useRoute()
     const rooms = ref([])
