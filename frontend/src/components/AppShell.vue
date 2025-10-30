@@ -433,9 +433,14 @@ export default {
         const savedIds = new Set(saved)
         
         // Remove rooms that are not in localStorage (user closed them)
-        window.__globalChatState.openRooms = window.__globalChatState.openRooms.filter(room => 
-          savedIds.has(room.id)
-        )
+        // Use splice to modify array in-place instead of creating new array
+        for (let i = window.__globalChatState.openRooms.length - 1; i >= 0; i--) {
+          const room = window.__globalChatState.openRooms[i]
+          if (!savedIds.has(room.id)) {
+            window.__globalChatState.openRooms.splice(i, 1)
+            console.log(`🗑️ Removed closed room: ${room.name || room.id}`)
+          }
+        }
         
         console.log(`⏭️ Skipping restore - synced with localStorage (${window.__globalChatState.openRooms.length} rooms)`)
       } catch (error) {
