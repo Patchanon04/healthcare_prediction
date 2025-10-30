@@ -51,8 +51,7 @@
           <canvas ref="distCanvas" height="140"></canvas>
         </div>
       </div>
-    </div>
-
+    
     <!-- Error Modal -->
     <Modal :show="showErrorModal" title="Error" @close="showErrorModal = false">
       <p class="text-gray-700">{{ errorMessage }}</p>
