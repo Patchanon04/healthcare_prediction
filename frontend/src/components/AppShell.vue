@@ -326,8 +326,9 @@ export default {
       notifications: [],
       loadingNotifications: false,
       notificationsSeen: false, // Track if user has seen notifications
-      // Floating chat windows state
+      // Floating chat windows state (will be restored in mounted)
       openRooms: [],
+      restoringRooms: false,
       userId: (() => {
         try {
           const cached = localStorage.getItem('user')
@@ -386,22 +387,24 @@ export default {
     // Restore open chat windows
     try {
       const saved = JSON.parse(localStorage.getItem('open_rooms') || '[]')
-      console.log(`🔄 Restoring open rooms from localStorage:`, saved)
+      console.log(`🔄 Restoring ${saved.length} open rooms from localStorage:`, saved)
       if (Array.isArray(saved) && saved.length) {
+        this.restoringRooms = true
         import('../services/api').then(async ({ getChatRoom }) => {
           for (const id of saved) {
             try {
               console.log(`🔄 Fetching room details for ${id}`)
               const room = await getChatRoom(id)
-              console.log(`🔄 Fetched room:`, room)
+              console.log(`✅ Restored room: ${room.name || room.id}`)
               if (!this.openRooms.find(r => String(r.id) === String(room.id))) {
                 this.openRooms.push(room)
-                console.log(`🔄 Added room ${room.id} to openRooms`)
               }
             } catch (error) {
               console.error(`❌ Failed to restore room ${id}:`, error)
             }
           }
+          this.restoringRooms = false
+          console.log(`✅ Finished restoring ${this.openRooms.length} rooms`)
         })
       }
     } catch (error) {
@@ -764,10 +767,16 @@ export default {
     openRooms: {
       deep: true,
       handler(newVal) {
+        // Don't save while restoring to avoid overwriting
+        if (this.restoringRooms) return
+        
         try {
           const ids = newVal.map(r => r.id)
           localStorage.setItem('open_rooms', JSON.stringify(ids))
-        } catch {}
+          console.log(`💾 Saved ${ids.length} open rooms to localStorage`)
+        } catch (e) {
+          console.error('Failed to save open rooms:', e)
+        }
       }
     },
     contactsCollapsed(newVal) {
