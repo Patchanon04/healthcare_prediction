@@ -336,8 +336,8 @@ export default {
           return null
         }
       })(),
-      // Collapsible contacts panel
-      contactsCollapsed: false,
+      // Collapsible contacts panel (restore from localStorage)
+      contactsCollapsed: localStorage.getItem('contacts_collapsed') === 'true',
     }
   },
   computed: {
@@ -769,6 +769,11 @@ export default {
           localStorage.setItem('open_rooms', JSON.stringify(ids))
         } catch {}
       }
+    },
+    contactsCollapsed(newVal) {
+      // Save contacts panel state to localStorage
+      localStorage.setItem('contacts_collapsed', String(newVal))
+      console.log(`💾 Contacts panel ${newVal ? 'collapsed' : 'expanded'}`)
     }
   }
 }
