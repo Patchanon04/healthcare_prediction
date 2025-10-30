@@ -252,3 +252,39 @@ class FollowUpNote(models.Model):
     
     def __str__(self):
         return f"{self.patient.full_name} - {self.title}"
+
+
+class Appointment(models.Model):
+    """
+    Model to store patient appointments.
+    """
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('confirmed', 'Confirmed'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('no_show', 'No Show'),
+    ]
+    
+    patient = models.ForeignKey('Patient', on_delete=models.CASCADE, related_name='appointments')
+    doctor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='appointments')
+    appointment_date = models.DateTimeField(db_index=True)
+    duration_minutes = models.PositiveIntegerField(default=30, help_text="Duration in minutes")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled', db_index=True)
+    reason = models.TextField(blank=True, help_text="Reason for appointment")
+    notes = models.TextField(blank=True, help_text="Doctor's notes")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'appointments'
+        ordering = ['appointment_date']
+        indexes = [
+            models.Index(fields=['appointment_date'], name='appt_date_idx'),
+            models.Index(fields=['patient', 'appointment_date'], name='patient_appt_idx'),
+            models.Index(fields=['doctor', 'appointment_date'], name='doctor_appt_idx'),
+            models.Index(fields=['status'], name='appt_status_idx'),
+        ]
+    
+    def __str__(self):
+        return f"{self.patient.full_name} - {self.appointment_date.strftime('%Y-%m-%d %H:%M')}"

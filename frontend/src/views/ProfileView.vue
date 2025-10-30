@@ -102,6 +102,75 @@
             </div>
           </div>
 
+          <!-- Change Password Section -->
+          <div class="border-t-2 border-gray-200 pt-6 mt-6">
+            <h3 class="text-lg font-semibold text-[#2C597D] mb-4">Change Password</h3>
+            
+            <!-- Current Password -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-[#2C597D] mb-2">Current Password</label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg class="w-5 h-5 text-[#7CC6D2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                  </svg>
+                </div>
+                <input 
+                  v-model="passwordForm.current_password" 
+                  type="password"
+                  class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#7CC6D2] transition" 
+                  placeholder="Enter current password" 
+                />
+              </div>
+            </div>
+
+            <!-- New Password -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-[#2C597D] mb-2">New Password</label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg class="w-5 h-5 text-[#7CC6D2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                  </svg>
+                </div>
+                <input 
+                  v-model="passwordForm.new_password" 
+                  type="password"
+                  class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#7CC6D2] transition" 
+                  placeholder="Enter new password (min 8 characters)" 
+                />
+              </div>
+            </div>
+
+            <!-- Confirm New Password -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-[#2C597D] mb-2">Confirm New Password</label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg class="w-5 h-5 text-[#7CC6D2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <input 
+                  v-model="passwordForm.confirm_password" 
+                  type="password"
+                  class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#7CC6D2] transition" 
+                  placeholder="Confirm new password" 
+                />
+              </div>
+            </div>
+
+            <!-- Change Password Button -->
+            <button 
+              type="button"
+              @click="handleChangePassword"
+              :disabled="changingPassword || !passwordForm.current_password || !passwordForm.new_password || !passwordForm.confirm_password"
+              class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl py-3 font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ changingPassword ? 'Changing Password...' : 'Change Password' }}
+            </button>
+          </div>
+
           <!-- Action Buttons -->
           <div class="flex space-x-4 pt-4">
             <button 
@@ -138,6 +207,7 @@ export default {
   setup() {
     const toast = useToast()
     const loading = ref(false)
+    const changingPassword = ref(false)
     const avatarPreview = ref(null)
     const avatarFile = ref(null)
     const form = ref({
@@ -145,6 +215,11 @@ export default {
       email: '',
       contact: '',
       role: 'doctor'
+    })
+    const passwordForm = ref({
+      current_password: '',
+      new_password: '',
+      confirm_password: ''
     })
 
     const fetchProfile = async () => {
@@ -223,16 +298,55 @@ export default {
       toast.info('Changes cancelled')
     }
 
+    const handleChangePassword = async () => {
+      // Validation
+      if (passwordForm.value.new_password.length < 8) {
+        toast.error('New password must be at least 8 characters')
+        return
+      }
+
+      if (passwordForm.value.new_password !== passwordForm.value.confirm_password) {
+        toast.error('New passwords do not match')
+        return
+      }
+
+      changingPassword.value = true
+      try {
+        const { changePassword } = await import('../services/api')
+        await changePassword({
+          current_password: passwordForm.value.current_password,
+          new_password: passwordForm.value.new_password
+        })
+        
+        // Clear password form
+        passwordForm.value = {
+          current_password: '',
+          new_password: '',
+          confirm_password: ''
+        }
+        
+        toast.success('Password changed successfully!')
+      } catch (e) {
+        const errorMsg = e.response?.data?.error || 'Failed to change password'
+        toast.error(errorMsg)
+      } finally {
+        changingPassword.value = false
+      }
+    }
+
     onMounted(fetchProfile)
 
     return { 
       profile: userStore.profile, 
       form, 
-      loading, 
+      loading,
+      changingPassword,
+      passwordForm,
       avatarPreview,
       handleAvatarChange,
       handleSave, 
-      handleCancel 
+      handleCancel,
+      handleChangePassword
     }
   }
 }

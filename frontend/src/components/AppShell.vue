@@ -34,11 +34,11 @@
         </router-link>
 
         <router-link 
-          to="/diagnoses"
+          to="/appointments"
           class="block px-6 py-3 rounded-r-full hover:bg-white/10 transition text-[#00BCD4] bg-white border-2 border-transparent max-w-[200px]"
           active-class="!text-orange-500 !border-orange-500"
         >
-          <span class="font-semibold text-lg">Diagnoses</span>
+          <span class="font-semibold text-lg">Appointments</span>
         </router-link>
 
         <button 

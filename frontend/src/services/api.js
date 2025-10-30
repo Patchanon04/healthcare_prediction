@@ -200,6 +200,11 @@ export const updateProfile = async (profileData) => {
   return response.data
 }
 
+export const changePassword = async (passwordData) => {
+  const response = await api.post('/api/v1/auth/change-password/', passwordData)
+  return response.data
+}
+
 // Chat APIs
 export const listChatUsers = async () => {
   const response = await api.get('/api/v1/chat/users/')

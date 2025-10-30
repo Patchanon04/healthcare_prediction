@@ -5,6 +5,7 @@ import Dashboard from '../views/Dashboard.vue'
 import PatientDetail from '../views/PatientDetail.vue'
 import ProfileView from '../views/ProfileView.vue'
 import ChatView from '../views/ChatView.vue'
+import AppointmentsView from '../views/AppointmentsView.vue'
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -15,6 +16,7 @@ const routes = [
   { path: '/patients/:id', name: 'PatientDetail', component: PatientDetail, props: true },
   { path: '/profile', name: 'Profile', component: ProfileView },
   { path: '/chat', name: 'Chat', component: ChatView, meta: { title: 'Chat' } },
+  { path: '/appointments', name: 'Appointments', component: AppointmentsView, meta: { title: 'Appointments' } },
 ]
 
 const router = createRouter({
