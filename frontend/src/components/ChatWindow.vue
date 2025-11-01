@@ -19,10 +19,8 @@
 
     <div ref="messagesEl" class="h-80 overflow-y-auto p-3 space-y-2 bg-gray-50">
       <template v-for="group in groupedMessages" :key="group.dateKey">
-        <div class="text-center text-[10px] uppercase tracking-wide text-gray-400 mt-2 mb-1 flex items-center gap-2">
-          <span class="flex-1 h-px bg-gray-200"></span>
+        <div class="text-center text-[10px] uppercase tracking-wide text-gray-400 mt-3 mb-2">
           <span class="px-3 py-1 bg-gray-200/60 rounded-full">{{ formatDateLabel(group.dateKey) }}</span>
-          <span class="flex-1 h-px bg-gray-200"></span>
         </div>
         <div v-for="(m,i) in group.items" :key="m.id || `${group.dateKey}-${i}`" class="space-y-1">
           <div class="flex w-full" :class="isSelf(m) ? 'justify-end' : 'justify-start'">
@@ -32,7 +30,6 @@
               <div class="text-[10px] mt-0.5" :class="isSelf(m) ? 'text-blue-100' : 'text-gray-400'">{{ formatTime(m.created_at) }}</div>
             </div>
           </div>
-          <div v-if="i < group.items.length - 1" class="mt-2 mb-1 border-b border-gray-200"></div>
         </div>
       </template>
     </div>
