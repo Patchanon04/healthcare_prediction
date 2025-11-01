@@ -12,37 +12,40 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <button @click="$emit('minimize', room.id)" class="text-white/90 hover:text-white text-sm">_</button>
         <button @click="close" class="text-white/90 hover:text-white text-sm">✕</button>
       </div>
     </div>
 
     <div ref="messagesEl" class="h-80 overflow-y-auto p-3 space-y-2 bg-gray-50">
-      <template v-for="(group, dateKey) in groupedMessages" :key="dateKey">
+      <template v-for="group in groupedMessages" :key="group.dateKey">
         <div class="text-center text-[10px] uppercase tracking-wide text-gray-400 mt-2 mb-1 flex items-center gap-2">
           <span class="flex-1 h-px bg-gray-200"></span>
-          <span class="px-3 py-1 bg-gray-200/60 rounded-full">{{ formatDateLabel(dateKey) }}</span>
+          <span class="px-3 py-1 bg-gray-200/60 rounded-full">{{ formatDateLabel(group.dateKey) }}</span>
           <span class="flex-1 h-px bg-gray-200"></span>
         </div>
-        <div v-for="(m,i) in group" :key="m.id || `${dateKey}-${i}`" class="flex w-full" :class="isSelf(m) ? 'justify-end' : 'justify-start'">
-          <div class="max-w-[80%] rounded-2xl px-3 py-2 text-sm" :class="isSelf(m) ? 'bg-[#7b68ee] text-white' : 'bg-white border text-gray-800'">
-            <div v-if="!isSelf(m)" class="text-[10px] opacity-70 font-semibold mb-0.5">{{ m.sender?.full_name || m.sender?.username }}</div>
-            <div class="whitespace-pre-wrap break-words">{{ m.content }}</div>
-            <div class="text-[10px] mt-0.5" :class="isSelf(m) ? 'text-blue-100' : 'text-gray-400'">{{ formatTime(m.created_at) }}</div>
+        <div v-for="(m,i) in group.items" :key="m.id || `${group.dateKey}-${i}`" class="space-y-1">
+          <div class="flex w-full" :class="isSelf(m) ? 'justify-end' : 'justify-start'">
+            <div class="max-w-[80%] rounded-2xl px-3 py-2 text-sm" :class="isSelf(m) ? 'bg-[#7b68ee] text-white' : 'bg-white border text-gray-800'">
+              <div v-if="!isSelf(m)" class="text-[10px] opacity-70 font-semibold mb-0.5">{{ m.sender?.full_name || m.sender?.username }}</div>
+              <div class="whitespace-pre-wrap break-words">{{ m.content }}</div>
+              <div class="text-[10px] mt-0.5" :class="isSelf(m) ? 'text-blue-100' : 'text-gray-400'">{{ formatTime(m.created_at) }}</div>
+            </div>
           </div>
+          <div v-if="i < group.items.length - 1" class="mt-2 mb-1 border-b border-gray-200"></div>
         </div>
-        <div v-if="i < group.length - 1" class="mt-2 mb-1 border-b border-gray-200"></div>
       </template>
     </div>
 
     <form @submit.prevent="send" class="border-t p-2 bg-white flex items-center gap-2">
       <input v-model="draft" @input="handleTyping" type="text" placeholder="Aa" class="flex-1 text-sm border rounded-full px-3 py-2 focus:ring-2 focus:ring-[#7b68ee]" />
       <button type="submit" :disabled="!draft.trim()" class="text-white bg-[#7b68ee] px-3 py-1 rounded-full text-sm disabled:opacity-50">Send</button>
-{{ ... }}
     </form>
   </div>
 </template>
 
 <script>
+{{ ... }}
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { listMessages, markMessagesRead } from '../services/api'
 
@@ -127,12 +130,20 @@ export default {
       return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
     }
     const groupedMessages = computed(() => {
-      return messages.value.reduce((acc, message) => {
+      const groups = messages.value.reduce((acc, message) => {
         const dateKey = message.created_at ? new Date(message.created_at).toISOString().slice(0, 10) : 'unknown'
         if (!acc[dateKey]) acc[dateKey] = []
         acc[dateKey].push(message)
         return acc
       }, {})
+
+      return Object.entries(groups)
+        .map(([dateKey, items]) => {
+          const parsed = new Date(dateKey)
+          const sortKey = Number.isNaN(parsed.getTime()) ? Infinity : parsed.getTime()
+          return { dateKey, items, sortKey }
+        })
+        .sort((a, b) => a.sortKey - b.sortKey)
     })
 
     const connectWS = () => {
