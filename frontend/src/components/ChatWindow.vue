@@ -45,7 +45,6 @@
 </template>
 
 <script>
-{{ ... }}
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { listMessages, markMessagesRead } from '../services/api'
 
