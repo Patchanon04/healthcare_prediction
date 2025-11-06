@@ -1,3 +1,12 @@
+class InputLayerCompat(KerasInputLayer):
+    """InputLayer ที่รองรับพารามิเตอร์ batch_shape จากโมเดล Keras รุ่นใหม่."""
+
+    def __init__(self, *args, batch_shape=None, **kwargs):
+        if batch_shape is not None and "batch_input_shape" not in kwargs:
+            kwargs["batch_input_shape"] = batch_shape
+        kwargs.pop("batch_shape", None)
+        super().__init__(*args, **kwargs)
+
 """
 Brain Tumor Detection Models supporting TensorFlow/Keras and PyTorch formats.
 """
@@ -12,6 +21,7 @@ import cv2
 import numpy as np
 import torch
 import torch.nn as nn
+from keras.layers import InputLayer as KerasInputLayer
 from keras.models import load_model
 from torchvision import models
 
@@ -53,9 +63,18 @@ class BrainTumorModel1(BrainTumorModelBase):
 
         load_errors = []
 
+        custom_objects = {
+            "InputLayer": InputLayerCompat,
+            "keras.engine.input_layer.InputLayer": InputLayerCompat,
+            "tensorflow.python.keras.engine.input_layer.InputLayer": InputLayerCompat,
+        }
+
         if primary_exists:
             try:
-                self.model = load_model(str(model_primary_path))
+                self.model = load_model(
+                    str(model_primary_path),
+                    custom_objects=custom_objects,
+                )
                 logger.info("%s loaded from %s", self.model_name, model_primary_path)
                 self.is_loaded = True
                 return
@@ -65,9 +84,19 @@ class BrainTumorModel1(BrainTumorModelBase):
                 )
                 logger.warning("%s", load_errors[-1])
 
+                # หากไฟล์หลักเป็น .keras (SavedModel) แต่เปิดไม่ได้ ให้ลองเฉพาะ fallback
+                if model_primary_path and model_primary_path.suffix == ".keras":
+                    logger.info(
+                        "Skipping primary %s due to load failure, trying fallback",
+                        model_primary_path,
+                    )
+
         if fallback_exists:
             try:
-                self.model = load_model(str(model_fallback_path))
+                self.model = load_model(
+                    str(model_fallback_path),
+                    custom_objects=custom_objects,
+                )
                 logger.info("%s loaded from fallback %s", self.model_name, model_fallback_path)
                 self.is_loaded = True
                 return
