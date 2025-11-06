@@ -51,19 +51,40 @@ class BrainTumorModel1(BrainTumorModelBase):
         primary_exists = model_primary_path is not None and model_primary_path.exists()
         fallback_exists = model_fallback_path is not None and model_fallback_path.exists()
 
-        if primary_exists:
-            self.model = load_model(str(model_primary_path))
-            logger.info("%s loaded from %s", self.model_name, model_primary_path)
-        elif fallback_exists:
-            self.model = load_model(str(model_fallback_path))
-            logger.info("%s loaded from fallback %s", self.model_name, model_fallback_path)
-        else:
-            raise FileNotFoundError(
-                "Neither primary model (%s) nor fallback (%s) found" %
-                (model_primary_path, model_fallback_path)
-            )
+        load_errors = []
 
-        self.is_loaded = True
+        if primary_exists:
+            try:
+                self.model = load_model(str(model_primary_path))
+                logger.info("%s loaded from %s", self.model_name, model_primary_path)
+                self.is_loaded = True
+                return
+            except Exception as err:  # pylint: disable=broad-except
+                load_errors.append(
+                    f"Primary load failed ({model_primary_path}): {err}"
+                )
+                logger.warning("%s", load_errors[-1])
+
+        if fallback_exists:
+            try:
+                self.model = load_model(str(model_fallback_path))
+                logger.info("%s loaded from fallback %s", self.model_name, model_fallback_path)
+                self.is_loaded = True
+                return
+            except Exception as err:  # pylint: disable=broad-except
+                load_errors.append(
+                    f"Fallback load failed ({model_fallback_path}): {err}"
+                )
+                logger.error("%s", load_errors[-1])
+
+        if load_errors:
+            raise RuntimeError("; ".join(load_errors))
+
+        raise FileNotFoundError(
+            "Neither primary model (%s) nor fallback (%s) found" %
+            (model_primary_path, model_fallback_path)
+        )
+        
 
     def preprocess_image(self, image: np.ndarray) -> np.ndarray:
         if image.shape[:2] != self.input_size:
