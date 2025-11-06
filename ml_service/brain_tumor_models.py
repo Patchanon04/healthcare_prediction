@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 import torch
 import torch.nn as nn
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 from torchvision import models
 
 logger = logging.getLogger(__name__)
