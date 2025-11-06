@@ -46,8 +46,8 @@ app.add_middleware(
 
 # Configuration
 MODEL_VERSION = "v2.0"
-S3_BUCKET = os.getenv("AWS_STORAGE_BUCKET_NAME", "your-bucket-name")
-AWS_REGION = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
+S3_BUCKET = os.getenv("AWS_STORAGE_BUCKET_NAME", "medical-diagnosis-images")
+AWS_REGION = os.getenv("AWS_S3_REGION_NAME", "ap-southeast-2")
 
 # Model paths in S3
 MODEL1_PRIMARY_KEY = os.getenv(
