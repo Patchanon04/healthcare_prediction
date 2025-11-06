@@ -50,9 +50,18 @@ S3_BUCKET = os.getenv("AWS_STORAGE_BUCKET_NAME", "your-bucket-name")
 AWS_REGION = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
 
 # Model paths in S3
-MODEL1_JSON_KEY = os.getenv("MODEL1_JSON_KEY", "models/brain_tumor/model1/model.json")
-MODEL1_WEIGHTS_KEY = os.getenv("MODEL1_WEIGHTS_KEY", "models/brain_tumor/model1/model.h5")
-MODEL2_KEY = os.getenv("MODEL2_KEY", "models/brain_tumor/model2/cnn-parameters-improvement-23-0.91.model")
+MODEL1_PRIMARY_KEY = os.getenv(
+    "MODEL1_PRIMARY_KEY",
+    "models/brain_tumor/model1/img_clf.keras",
+)
+MODEL1_FALLBACK_KEY = os.getenv(
+    "MODEL1_FALLBACK_KEY",
+    "models/brain_tumor/model1/img_clf.h5",
+)
+MODEL2_KEY = os.getenv(
+    "MODEL2_KEY",
+    "models/brain_tumor/model2/best_model_test6.pth",
+)
 
 # Global variables for models
 s3_loader = None
@@ -101,9 +110,20 @@ async def startup_event():
         logger.info("Loading Brain Tumor Model 1...")
         model1 = BrainTumorModel1()
         
-        model1_json_path = s3_loader.download_model(MODEL1_JSON_KEY)
-        model1_weights_path = s3_loader.download_model(MODEL1_WEIGHTS_KEY)
-        model1.load_model(model1_json_path, model1_weights_path)
+        model1_primary_path = s3_loader.download_model(MODEL1_PRIMARY_KEY)
+
+        model1_fallback_path = None
+        if MODEL1_FALLBACK_KEY:
+            try:
+                model1_fallback_path = s3_loader.download_model(MODEL1_FALLBACK_KEY)
+            except Exception as fallback_error:
+                logger.warning(
+                    "Fallback model download failed (%s): %s",
+                    MODEL1_FALLBACK_KEY,
+                    fallback_error,
+                )
+
+        model1.load_model(model1_primary_path, model1_fallback_path)
         
         # Download and load Model 2
         logger.info("Loading Brain Tumor Model 2...")

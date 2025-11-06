@@ -1,232 +1,189 @@
 """
-Brain Tumor Detection Models
-Support for multiple model architectures
+Brain Tumor Detection Models supporting TensorFlow/Keras and PyTorch formats.
 """
-import numpy as np
-import cv2
-import tensorflow as tf
-from tensorflow.keras.models import model_from_json, load_model
-from pathlib import Path
-from typing import Tuple, Dict
+
+from __future__ import annotations
+
 import logging
-import json
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union
+
+import cv2
+import numpy as np
+import torch
+import torch.nn as nn
+from tensorflow.keras.models import load_model
+from torchvision import models
 
 logger = logging.getLogger(__name__)
 
 
 class BrainTumorModelBase:
-    """Base class for brain tumor detection models"""
-    
-    def __init__(self, model_name: str):
+    """Base class for brain tumor detection models."""
+
+    def __init__(self, model_name: str) -> None:
         self.model_name = model_name
         self.model = None
         self.is_loaded = False
-    
-    def preprocess_image(self, image: np.ndarray) -> np.ndarray:
-        """Preprocess image for model input"""
+
+    def preprocess_image(self, image: np.ndarray) -> Union[np.ndarray, torch.Tensor]:
         raise NotImplementedError
-    
+
     def predict(self, image: np.ndarray) -> Tuple[float, Dict]:
-        """
-        Predict brain tumor from image
-        
-        Args:
-            image: Input image as numpy array
-            
-        Returns:
-            Tuple of (confidence, metadata)
-        """
         raise NotImplementedError
-    
-    def load_model(self, model_path: Path):
-        """Load model from file"""
+
+    def load_model(self, *args, **kwargs) -> None:  # pragma: no cover - interface definition
         raise NotImplementedError
 
 
 class BrainTumorModel1(BrainTumorModelBase):
-    """
-    Brain Tumor Detection Model 1
-    Architecture: Custom CNN with JSON + H5 weights
-    Input: 224x224 RGB image
-    Output: Binary classification (tumor/no tumor)
-    """
-    
-    def __init__(self):
+    """TensorFlow/Keras model loader (.keras primary with .h5 fallback)."""
+
+    def __init__(self) -> None:
         super().__init__("BrainTumorModel1")
         self.input_size = (224, 224)
-    
-    def load_model(self, model_json_path: Path, model_weights_path: Path):
-        """
-        Load model from JSON architecture and H5 weights
-        
-        Args:
-            model_json_path: Path to model.json
-            model_weights_path: Path to model.h5
-        """
-        try:
-            # Load model architecture
-            with open(model_json_path, 'r') as json_file:
-                loaded_model_json = json_file.read()
-            
-            self.model = model_from_json(loaded_model_json)
-            
-            # Load weights
-            self.model.load_weights(str(model_weights_path))
-            
-            self.is_loaded = True
-            logger.info(f"{self.model_name} loaded successfully")
-            
-        except Exception as e:
-            logger.error(f"Error loading {self.model_name}: {e}")
-            raise
-    
+
+    def load_model(
+        self,
+        model_primary_path: Optional[Path],
+        model_fallback_path: Optional[Path] = None,
+    ) -> None:
+        primary_exists = model_primary_path is not None and model_primary_path.exists()
+        fallback_exists = model_fallback_path is not None and model_fallback_path.exists()
+
+        if primary_exists:
+            self.model = load_model(str(model_primary_path))
+            logger.info("%s loaded from %s", self.model_name, model_primary_path)
+        elif fallback_exists:
+            self.model = load_model(str(model_fallback_path))
+            logger.info("%s loaded from fallback %s", self.model_name, model_fallback_path)
+        else:
+            raise FileNotFoundError(
+                "Neither primary model (%s) nor fallback (%s) found" %
+                (model_primary_path, model_fallback_path)
+            )
+
+        self.is_loaded = True
+
     def preprocess_image(self, image: np.ndarray) -> np.ndarray:
-        """
-        Preprocess image for Model 1
-        
-        Args:
-            image: Input image (BGR or RGB)
-            
-        Returns:
-            Preprocessed image ready for prediction
-        """
-        # Resize to 224x224
         if image.shape[:2] != self.input_size:
             image = cv2.resize(image, self.input_size)
-        
-        # Ensure RGB format (if BGR, convert)
+
         if len(image.shape) == 2:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-        
-        # Normalize to [0, 1]
+        else:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
         image = image.astype(np.float32) / 255.0
-        
-        # Add batch dimension
         image = np.expand_dims(image, axis=0)
-        
+
         return image
-    
+
     def predict(self, image: np.ndarray) -> Tuple[float, Dict]:
-        """
-        Predict brain tumor probability
-        
-        Args:
-            image: Input image as numpy array
-            
-        Returns:
-            Tuple of (tumor_probability, metadata)
-        """
         if not self.is_loaded:
             raise RuntimeError(f"{self.model_name} is not loaded")
-        
-        # Preprocess
+
         processed_image = self.preprocess_image(image)
-        
-        # Predict
         prediction = self.model.predict(processed_image, verbose=0)
-        
-        # Extract tumor probability (assuming binary classification)
-        # prediction shape: (1, 2) for [no_tumor, tumor]
+
         tumor_prob = float(prediction[0, 1])
-        
         metadata = {
             "model_name": self.model_name,
             "input_shape": self.input_size,
             "raw_prediction": prediction[0].tolist(),
             "tumor_probability": tumor_prob,
-            "no_tumor_probability": float(prediction[0, 0])
+            "no_tumor_probability": float(prediction[0, 0]),
         }
-        
+
         return tumor_prob, metadata
 
 
 class BrainTumorModel2(BrainTumorModelBase):
-    """
-    Brain Tumor Detection Model 2
-    Architecture: CNN with checkpoint-based weights
-    Input: 150x150 RGB image (typical for this architecture)
-    Output: Binary classification (tumor/no tumor)
-    """
-    
-    def __init__(self):
+    """PyTorch ResNet18 model loader for `.pth` state_dict checkpoints."""
+
+    def __init__(self, class_names: Optional[List[str]] = None) -> None:
         super().__init__("BrainTumorModel2")
-        self.input_size = (150, 150)  # Common size for this model type
-    
-    def load_model(self, model_path: Path):
-        """
-        Load model from checkpoint file (.model or .h5)
-        
-        Args:
-            model_path: Path to model checkpoint
-        """
-        try:
-            self.model = load_model(str(model_path))
-            self.is_loaded = True
-            logger.info(f"{self.model_name} loaded successfully from {model_path}")
-            
-        except Exception as e:
-            logger.error(f"Error loading {self.model_name}: {e}")
-            raise
-    
-    def preprocess_image(self, image: np.ndarray) -> np.ndarray:
-        """
-        Preprocess image for Model 2
-        
-        Args:
-            image: Input image (BGR or RGB)
-            
-        Returns:
-            Preprocessed image ready for prediction
-        """
-        # Resize to 150x150
+        self.input_size = (224, 224)
+        self.class_names = class_names or ["glioma", "meningioma", "notumor", "pituitary"]
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = self._build_model(len(self.class_names)).to(self.device)
+        self.no_tumor_index = self._resolve_no_tumor_index()
+
+    def _build_model(self, num_classes: int) -> nn.Module:
+        model = models.resnet18(weights=None)
+        in_features = model.fc.in_features
+        model.fc = nn.Sequential(
+            nn.Dropout(p=0.5),
+            nn.Linear(in_features, num_classes),
+        )
+        return model
+
+    def _resolve_no_tumor_index(self) -> int:
+        possible_names = {"notumor", "no_tumor", "no-tumor", "no", "none"}
+        for idx, name in enumerate(self.class_names):
+            if name.lower() in possible_names:
+                return idx
+
+        logger.warning(
+            "No explicit 'no tumor' class found in class names %s. Using last class as non-tumor.",
+            self.class_names,
+        )
+        return len(self.class_names) - 1
+
+    def load_model(self, model_path: Path) -> None:
+        state_dict = torch.load(model_path, map_location=self.device)
+        self.model.load_state_dict(state_dict)
+        self.model.eval()
+        self.is_loaded = True
+        logger.info("%s loaded from %s", self.model_name, model_path)
+
+    def preprocess_image(self, image: np.ndarray) -> torch.Tensor:
         if image.shape[:2] != self.input_size:
             image = cv2.resize(image, self.input_size)
-        
-        # Ensure RGB format
+
         if len(image.shape) == 2:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-        
-        # Normalize to [0, 1]
+        else:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
         image = image.astype(np.float32) / 255.0
-        
-        # Add batch dimension
-        image = np.expand_dims(image, axis=0)
-        
-        return image
-    
+        tensor = torch.from_numpy(image).permute(2, 0, 1)
+
+        mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+        std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+
+        tensor = (tensor - mean) / std
+        tensor = tensor.unsqueeze(0)
+
+        return tensor
+
     def predict(self, image: np.ndarray) -> Tuple[float, Dict]:
-        """
-        Predict brain tumor probability
-        
-        Args:
-            image: Input image as numpy array
-            
-        Returns:
-            Tuple of (tumor_probability, metadata)
-        """
         if not self.is_loaded:
             raise RuntimeError(f"{self.model_name} is not loaded")
-        
-        # Preprocess
-        processed_image = self.preprocess_image(image)
-        
-        # Predict
-        prediction = self.model.predict(processed_image, verbose=0)
-        
-        # Extract tumor probability
-        # Assuming binary classification output
-        if prediction.shape[-1] == 1:
-            # Single output neuron (sigmoid)
-            tumor_prob = float(prediction[0, 0])
-        else:
-            # Two output neurons (softmax)
-            tumor_prob = float(prediction[0, 1])
-        
+
+        processed_tensor = self.preprocess_image(image).to(self.device)
+
+        with torch.no_grad():
+            logits = self.model(processed_tensor)
+            probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
+
+        class_probabilities = {
+            class_name: float(probs[idx])
+            for idx, class_name in enumerate(self.class_names)
+        }
+
+        no_tumor_prob = probs[self.no_tumor_index]
+        tumor_prob = float(1.0 - no_tumor_prob)
+        predicted_index = int(np.argmax(probs))
+        predicted_class = self.class_names[predicted_index]
+
         metadata = {
             "model_name": self.model_name,
             "input_shape": self.input_size,
-            "raw_prediction": prediction[0].tolist(),
-            "tumor_probability": tumor_prob
+            "class_probabilities": class_probabilities,
+            "predicted_class": predicted_class,
+            "no_tumor_probability": float(no_tumor_prob),
+            "tumor_probability": tumor_prob,
         }
-        
+
         return tumor_prob, metadata
