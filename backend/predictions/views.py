@@ -27,7 +27,6 @@ from .models import Transaction, UserProfile, Patient, ChatRoom, Message, Treatm
 from .serializers import (
     TransactionSerializer,
     UploadImageSerializer,
-    RegisterSerializer,
     LoginSerializer,
     UserProfileSerializer,
     ChatRoomSerializer,
