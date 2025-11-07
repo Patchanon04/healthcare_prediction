@@ -79,7 +79,6 @@
           <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-[#00BCD4] to-[#00ACC1]">
             <div>
               <h2 class="text-2xl font-bold text-white">
-{{ ... }}
                 {{ formatSelectedDate }}
               </h2>
               <p class="text-white/80 mt-1">
