@@ -79,6 +79,7 @@
           <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-[#00BCD4] to-[#00ACC1]">
             <div>
               <h2 class="text-2xl font-bold text-white">
+{{ ... }}
                 {{ formatSelectedDate }}
               </h2>
               <p class="text-white/80 mt-1">
@@ -171,7 +172,7 @@
                       </svg>
                     </button>
                     <button 
-                      @click="deleteAppointment(appointment.id)"
+                      @click="requestDelete(appointment)"
                       class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
                       title="Delete"
                     >
@@ -222,9 +223,10 @@
               <div>
                 <label class="block text-sm font-medium text-[#2C597D] mb-2">Date *</label>
                 <input 
-                  v-model="form.date" 
+                  :value="formDateInput"
                   type="date"
                   required
+                  @input="onDateInput($event.target.value)"
                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#7CC6D2] transition"
                 />
               </div>
@@ -335,6 +337,8 @@ export default {
     const saving = ref(false)
     const showAddModal = ref(false)
     const showDayModal = ref(false)
+    const showDeleteConfirm = ref(false)
+    const appointmentToDelete = ref(null)
     const editingAppointment = ref(null)
     const appointments = ref([])
     const patients = ref([])
@@ -381,6 +385,32 @@ export default {
       const month = String(date.getMonth() + 1).padStart(2, '0')
       const day = String(date.getDate()).padStart(2, '0')
       return `${year}-${month}-${day}`
+    }
+
+    const buildAppointmentDateTime = () => {
+      const dateOnly = form.value.date ? new Date(form.value.date) : null
+      if (!dateOnly || Number.isNaN(dateOnly.getTime())) {
+        throw new Error('Invalid date value')
+      }
+      if (!form.value.time || !/^\d{2}:\d{2}$/.test(form.value.time)) {
+        throw new Error('Invalid time format. Please use HH:mm')
+      }
+      const [hourStr, minuteStr] = form.value.time.split(':')
+      const hours = Number(hourStr)
+      const minutes = Number(minuteStr)
+      if (
+        Number.isNaN(hours) ||
+        Number.isNaN(minutes) ||
+        hours < 0 ||
+        hours > 23 ||
+        minutes < 0 ||
+        minutes > 59
+      ) {
+        throw new Error('Invalid time value')
+      }
+      const appointmentDate = new Date(dateOnly)
+      appointmentDate.setHours(hours, minutes, 0, 0)
+      return appointmentDate
     }
 
     const toLocalDateKey = (value) => formatLocalDate(new Date(value))
@@ -549,6 +579,26 @@ export default {
       return labels[status] || status
     }
 
+    const formDateInput = computed(() => {
+      if (!form.value.date) return ''
+      const date = new Date(form.value.date)
+      if (Number.isNaN(date.getTime())) return ''
+      return formatLocalDate(date)
+    })
+
+    const onDateInput = (value) => {
+      if (!value) {
+        form.value.date = ''
+        return
+      }
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) {
+        form.value.date = ''
+        return
+      }
+      form.value.date = date.toISOString()
+    }
+
     const openCreateModal = (dateStr = null) => {
       editingAppointment.value = null
       const baseDate = dateStr
@@ -558,7 +608,7 @@ export default {
           : new Date()
       form.value = {
         ...defaultFormState(),
-        date: formatLocalDate(baseDate)
+        date: baseDate.toISOString()
       }
       showAddModal.value = true
     }
@@ -568,7 +618,7 @@ export default {
       const date = new Date(appointment.appointment_date)
       form.value = {
         patient_id: appointment.patient_id,
-        date: formatLocalDate(date),
+        date: date.toISOString(),
         time: date.toTimeString().slice(0, 5),
         duration_minutes: appointment.duration_minutes,
         status: appointment.status,
@@ -578,8 +628,7 @@ export default {
       showAddModal.value = true
     }
 
-    const deleteAppointment = async (id) => {
-      if (!confirm('Are you sure you want to delete this appointment?')) return
+    const performDelete = async (id) => {
       try {
         await deleteAppointmentApi(id)
         toast.success('Appointment deleted successfully')
@@ -592,13 +641,31 @@ export default {
       }
     }
 
+    const requestDelete = (appointment) => {
+      appointmentToDelete.value = appointment
+      showDeleteConfirm.value = true
+    }
+
+    const cancelDelete = () => {
+      showDeleteConfirm.value = false
+      appointmentToDelete.value = null
+    }
+
+    const confirmDelete = async () => {
+      if (!appointmentToDelete.value) return
+      try {
+        await performDelete(appointmentToDelete.value.id)
+        cancelDelete()
+      } catch (error) {
+        cancelDelete()
+        // performDelete already toasts error, so no extra toast here
+      }
+    }
+
     const saveAppointment = async () => {
       saving.value = true
       try {
-        const appointmentDate = new Date(`${form.value.date}T${form.value.time}:00`)
-        if (Number.isNaN(appointmentDate.getTime())) {
-          throw new Error('Invalid date or time')
-        }
+        const appointmentDate = buildAppointmentDateTime()
 
         const payload = {
           patient_id: form.value.patient_id,
@@ -654,6 +721,8 @@ export default {
       saving,
       showAddModal,
       showDayModal,
+      showDeleteConfirm,
+      appointmentToDelete,
       editingAppointment,
       appointments,
       patients,
@@ -661,6 +730,7 @@ export default {
       currentDate,
       selectedDate,
       currentMonthYear,
+      formDateInput,
       formatSelectedDate,
       calendarDays,
       selectedDateAppointments,
@@ -674,7 +744,10 @@ export default {
       getStatusLabel,
       openCreateModal,
       editAppointment,
-      deleteAppointment,
+      requestDelete,
+      confirmDelete,
+      cancelDelete,
+      onDateInput,
       saveAppointment,
       closeModal
     }
