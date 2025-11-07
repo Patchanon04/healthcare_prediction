@@ -311,6 +311,55 @@
           </form>
         </div>
       </div>
+    <!-- Delete Confirmation Modal -->
+    <div
+      v-if="showDeleteConfirm"
+      class="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"
+      @click.self="cancelDelete"
+    >
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.64 5.64l12.72 12.72M12 5a7 7 0 110 14 7 7 0 010-14z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-xl font-semibold text-[#2C597D]">Delete appointment?</h3>
+            <p class="text-gray-500">
+              This action cannot be undone. The appointment will be permanently removed.
+            </p>
+          </div>
+        </div>
+
+        <div v-if="appointmentToDelete" class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+          <p class="text-sm text-gray-600">
+            {{ formatTime(appointmentToDelete.appointment_date) }} · {{ appointmentToDelete.patient_name }}
+          </p>
+          <p class="text-sm text-gray-500 mt-1">
+            {{ appointmentToDelete.reason || 'No reason specified' }}
+          </p>
+        </div>
+
+        <div class="flex gap-3">
+          <button
+            type="button"
+            class="flex-1 bg-red-500 text-white rounded-xl py-3 font-semibold hover:bg-red-600 transition"
+            @click="confirmDelete"
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            class="flex-1 bg-gray-100 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-200 transition"
+            @click="cancelDelete"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
     </div>
   </AppShell>
 </template>
