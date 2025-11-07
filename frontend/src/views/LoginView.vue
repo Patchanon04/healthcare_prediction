@@ -46,25 +46,12 @@
 
           <!-- Login Button -->
           <button 
-            :disabled="loading" 
             class="w-full bg-white text-[#00BCD4] rounded-xl py-3 font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ loading ? 'Signing in...' : 'Login' }}
           </button>
-
-          <!-- Register Link -->
-          <div class="text-center">
-            <span class="text-white/80 text-sm">Don't have an account? </span>
-            <router-link to="/register" class="text-white text-sm font-semibold hover:underline">Register</router-link>
-          </div>
         </form>
       </div>
-
-      <!-- Right Illustration (semi-transparent over gradient) -->
-      <div class="hidden md:flex items-center justify-center">
-        <img :src="Brain" alt="OPEN BRAIN" class="w-[460px] h-auto object-contain opacity-90 md:opacity-95 drop-shadow-2xl filter saturate-150 contrast-110" />
-      </div>
-
     </div>
   </div>
 </template>

@@ -392,24 +392,6 @@ def seed_accounts(request):
     }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
-# Authentication Endpoints
-@api_view(['POST'])
-@permission_classes([permissions.AllowAny])
-def register(request):
-    serializer = RegisterSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.save()
-        # Create user profile
-        UserProfile.objects.create(user=user)
-        token, _ = Token.objects.get_or_create(user=user)
-        return Response({
-            'token': token.key,
-            'username': user.username,
-            'email': user.email,
-        }, status=status.HTTP_201_CREATED)
-    return Response({'error': 'Invalid data', 'details': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def login(request):

@@ -361,6 +361,15 @@ export default {
       })
     })
 
+    const formatLocalDate = (date) => {
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+
+    const toLocalDateKey = (value) => formatLocalDate(new Date(value))
+
     const calendarDays = computed(() => {
       const year = currentDate.value.getFullYear()
       const month = currentDate.value.getMonth()
@@ -383,9 +392,10 @@ export default {
       // Add previous month days
       for (let i = startingDayOfWeek - 1; i >= 0; i--) {
         const date = new Date(year, month - 1, prevMonthLastDay - i)
+        const dateStr = formatLocalDate(date)
         days.push({
           day: prevMonthLastDay - i,
-          date: date.toISOString().split('T')[0],
+          date: dateStr,
           isCurrentMonth: false,
           isToday: false,
           isSelected: false,
@@ -397,9 +407,9 @@ export default {
       // Add current month days
       for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day)
-        const dateStr = date.toISOString().split('T')[0]
+        const dateStr = formatLocalDate(date)
         const dayAppointments = appointments.value.filter(a => 
-          a.appointment_date.startsWith(dateStr)
+          toLocalDateKey(a.appointment_date) === dateStr
         )
         
         days.push({
@@ -419,7 +429,7 @@ export default {
         const date = new Date(year, month + 1, day)
         days.push({
           day,
-          date: date.toISOString().split('T')[0],
+          date: formatLocalDate(date),
           isCurrentMonth: false,
           isToday: false,
           isSelected: false,
@@ -434,7 +444,7 @@ export default {
     const selectedDateAppointments = computed(() => {
       if (!selectedDate.value) return []
       return appointments.value
-        .filter(a => a.appointment_date.startsWith(selectedDate.value))
+        .filter(a => toLocalDateKey(a.appointment_date) === selectedDate.value)
         .sort((a, b) => a.appointment_date.localeCompare(b.appointment_date))
     })
 
@@ -473,7 +483,7 @@ export default {
             patient_id: 1,
             patient_name: 'John Doe',
             patient_mrn: 'MRN001',
-            appointment_date: `${today.toISOString().split('T')[0]}T10:00:00`,
+            appointment_date: new Date(`${formatLocalDate(today)}T10:00:00`).toISOString(),
             duration_minutes: 30,
             status: 'scheduled',
             reason: 'Annual checkup',
@@ -484,7 +494,7 @@ export default {
             patient_id: 2,
             patient_name: 'Jane Smith',
             patient_mrn: 'MRN002',
-            appointment_date: `${today.toISOString().split('T')[0]}T14:30:00`,
+            appointment_date: new Date(`${formatLocalDate(today)}T14:30:00`).toISOString(),
             duration_minutes: 45,
             status: 'confirmed',
             reason: 'Follow-up consultation',
@@ -495,7 +505,7 @@ export default {
             patient_id: 3,
             patient_name: 'Bob Johnson',
             patient_mrn: 'MRN003',
-            appointment_date: `${tomorrow.toISOString().split('T')[0]}T09:00:00`,
+            appointment_date: new Date(`${formatLocalDate(tomorrow)}T09:00:00`).toISOString(),
             duration_minutes: 60,
             status: 'scheduled',
             reason: 'Initial consultation',
@@ -506,7 +516,7 @@ export default {
             patient_id: 1,
             patient_name: 'John Doe',
             patient_mrn: 'MRN001',
-            appointment_date: `${nextWeek.toISOString().split('T')[0]}T11:00:00`,
+            appointment_date: new Date(`${formatLocalDate(nextWeek)}T11:00:00`).toISOString(),
             duration_minutes: 30,
             status: 'scheduled',
             reason: 'Follow-up',
@@ -578,7 +588,7 @@ export default {
       const date = new Date(appointment.appointment_date)
       form.value = {
         patient_id: appointment.patient_id,
-        date: date.toISOString().split('T')[0],
+        date: formatLocalDate(date),
         time: date.toTimeString().slice(0, 5),
         duration_minutes: appointment.duration_minutes,
         status: appointment.status,
@@ -604,7 +614,7 @@ export default {
       saving.value = true
       try {
         // TODO: API call to create/update
-        const appointmentDate = `${form.value.date}T${form.value.time}:00`
+        const appointmentDate = new Date(`${form.value.date}T${form.value.time}:00`)
         
         if (editingAppointment.value) {
           // Update existing
@@ -612,7 +622,7 @@ export default {
           if (index !== -1) {
             appointments.value[index] = {
               ...appointments.value[index],
-              appointment_date: appointmentDate,
+              appointment_date: appointmentDate.toISOString(),
               duration_minutes: form.value.duration_minutes,
               status: form.value.status,
               reason: form.value.reason,
@@ -628,7 +638,7 @@ export default {
             patient_name: patient?.full_name || 'Unknown',
             patient_mrn: patient?.mrn || '',
             patient_id: form.value.patient_id,
-            appointment_date: appointmentDate,
+            appointment_date: appointmentDate.toISOString(),
             duration_minutes: form.value.duration_minutes,
             status: form.value.status,
             reason: form.value.reason,

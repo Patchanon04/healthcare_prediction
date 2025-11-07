@@ -174,12 +174,6 @@ export const checkHealth = async () => {
   return response.data
 }
 
-// Auth APIs
-export const register = async ({ username, password, email }) => {
-  const response = await api.post('/api/v1/auth/register/', { username, password, email })
-  return response.data
-}
-
 export const login = async ({ username, password }) => {
   const response = await api.post('/api/v1/auth/login/', { username, password })
   return response.data
