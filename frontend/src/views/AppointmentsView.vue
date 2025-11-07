@@ -8,7 +8,7 @@
           <p class="text-gray-500 mt-1">View and manage patient appointments</p>
         </div>
         <button 
-          @click="showAddModal = true"
+          @click="openCreateModal()"
           class="bg-gradient-to-r from-[#00BCD4] to-[#00ACC1] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition flex items-center gap-2"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -100,7 +100,7 @@
               </svg>
               <p class="text-gray-500 text-lg mb-4">No appointments on this date</p>
               <button 
-                @click="showAddModal = true; closeDayModal()"
+                @click="() => { closeDayModal(); openCreateModal(selectedDate.value) }"
                 class="bg-gradient-to-r from-[#00BCD4] to-[#00ACC1] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition"
               >
                 Add an appointment
@@ -315,9 +315,16 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import AppShell from '../components/AppShell.vue'
+import {
+  listAppointments,
+  createAppointment as createAppointmentApi,
+  updateAppointment as updateAppointmentApi,
+  deleteAppointment as deleteAppointmentApi,
+  listPatients
+} from '../services/api'
 
 export default {
   name: 'AppointmentsView',
@@ -331,34 +338,42 @@ export default {
     const editingAppointment = ref(null)
     const appointments = ref([])
     const patients = ref([])
+    const allowAutoFetch = ref(true)
     
     // Calendar state
     const currentDate = ref(new Date())
     const selectedDate = ref(null)
 
-    const form = ref({
+    const defaultFormState = () => ({
       patient_id: '',
       date: '',
-      time: '',
+      time: '09:00',
       duration_minutes: 30,
       status: 'scheduled',
       reason: '',
       notes: ''
     })
 
+    const form = ref(defaultFormState())
+
     // Calendar computed properties
     const currentMonthYear = computed(() => {
-      return currentDate.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      return currentDate.value.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
     })
+
+    const formatDisplayDate = (value) => {
+      const date = value instanceof Date ? value : new Date(value)
+      if (Number.isNaN(date.getTime())) return ''
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    }
 
     const formatSelectedDate = computed(() => {
       if (!selectedDate.value) return ''
-      return new Date(selectedDate.value).toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      })
+      return formatDisplayDate(selectedDate.value)
     })
 
     const formatLocalDate = (date) => {
@@ -468,66 +483,27 @@ export default {
     }
 
     const fetchAppointments = async () => {
+      if (loading.value) return
       loading.value = true
       try {
-        // Mock data for now - replace with actual API call
-        const today = new Date()
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        const nextWeek = new Date(today)
-        nextWeek.setDate(nextWeek.getDate() + 7)
-        
-        appointments.value = [
-          {
-            id: 1,
-            patient_id: 1,
-            patient_name: 'John Doe',
-            patient_mrn: 'MRN001',
-            appointment_date: new Date(`${formatLocalDate(today)}T10:00:00`).toISOString(),
-            duration_minutes: 30,
-            status: 'scheduled',
-            reason: 'Annual checkup',
-            notes: ''
-          },
-          {
-            id: 2,
-            patient_id: 2,
-            patient_name: 'Jane Smith',
-            patient_mrn: 'MRN002',
-            appointment_date: new Date(`${formatLocalDate(today)}T14:30:00`).toISOString(),
-            duration_minutes: 45,
-            status: 'confirmed',
-            reason: 'Follow-up consultation',
-            notes: 'Patient requested afternoon slot'
-          },
-          {
-            id: 3,
-            patient_id: 3,
-            patient_name: 'Bob Johnson',
-            patient_mrn: 'MRN003',
-            appointment_date: new Date(`${formatLocalDate(tomorrow)}T09:00:00`).toISOString(),
-            duration_minutes: 60,
-            status: 'scheduled',
-            reason: 'Initial consultation',
-            notes: ''
-          },
-          {
-            id: 4,
-            patient_id: 1,
-            patient_name: 'John Doe',
-            patient_mrn: 'MRN001',
-            appointment_date: new Date(`${formatLocalDate(nextWeek)}T11:00:00`).toISOString(),
-            duration_minutes: 30,
-            status: 'scheduled',
-            reason: 'Follow-up',
-            notes: ''
-          }
-        ]
-        
-        // Don't auto-select, let user click on a day
-      
+        const reference = currentDate.value
+        const rangeStart = new Date(reference.getFullYear(), reference.getMonth(), 1)
+        const rangeEnd = new Date(reference.getFullYear(), reference.getMonth() + 1, 0)
+        const data = await listAppointments({
+          page: 1,
+          pageSize: 500,
+          start: formatLocalDate(rangeStart),
+          end: formatLocalDate(rangeEnd)
+        })
+        const records = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : []
+        appointments.value = records
+          .map(record => ({
+            ...record,
+            appointment_date: record.appointment_date
+          }))
+          .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date))
       } catch (e) {
-        toast.error('Failed to load appointments')
+        toast.error(e.message || 'Failed to load appointments')
       } finally {
         loading.value = false
       }
@@ -535,29 +511,19 @@ export default {
 
     const fetchPatients = async () => {
       try {
-        const { listPatients } = await import('../services/api')
-        const data = await listPatients({ page: 1, pageSize: 100 })
+        const data = await listPatients({ page: 1, pageSize: 200 })
         patients.value = data.results || []
       } catch (e) {
         toast.error('Failed to load patients')
       }
     }
 
-    const formatDate = (dateStr) => {
-      const date = new Date(dateStr)
-      return date.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-      })
-    }
-
     const formatTime = (dateStr) => {
       const date = new Date(dateStr)
-      return date.toLocaleTimeString('en-US', { 
+      return date.toLocaleTimeString('th-TH', { 
         hour: '2-digit', 
-        minute: '2-digit' 
+        minute: '2-digit',
+        hour12: false
       })
     }
 
@@ -583,6 +549,20 @@ export default {
       return labels[status] || status
     }
 
+    const openCreateModal = (dateStr = null) => {
+      editingAppointment.value = null
+      const baseDate = dateStr
+        ? new Date(dateStr)
+        : selectedDate.value
+          ? new Date(selectedDate.value)
+          : new Date()
+      form.value = {
+        ...defaultFormState(),
+        date: formatLocalDate(baseDate)
+      }
+      showAddModal.value = true
+    }
+
     const editAppointment = (appointment) => {
       editingAppointment.value = appointment
       const date = new Date(appointment.appointment_date)
@@ -600,56 +580,54 @@ export default {
 
     const deleteAppointment = async (id) => {
       if (!confirm('Are you sure you want to delete this appointment?')) return
-      
       try {
-        // TODO: API call to delete
-        appointments.value = appointments.value.filter(a => a.id !== id)
+        await deleteAppointmentApi(id)
         toast.success('Appointment deleted successfully')
+        await fetchAppointments()
+        if (selectedDate.value) {
+          showDayModal.value = true
+        }
       } catch (e) {
-        toast.error('Failed to delete appointment')
+        toast.error(e.message || 'Failed to delete appointment')
       }
     }
 
     const saveAppointment = async () => {
       saving.value = true
       try {
-        // TODO: API call to create/update
         const appointmentDate = new Date(`${form.value.date}T${form.value.time}:00`)
-        
+        if (Number.isNaN(appointmentDate.getTime())) {
+          throw new Error('Invalid date or time')
+        }
+
+        const payload = {
+          patient_id: form.value.patient_id,
+          appointment_date: appointmentDate.toISOString(),
+          duration_minutes: form.value.duration_minutes,
+          status: form.value.status,
+          reason: form.value.reason,
+          notes: form.value.notes
+        }
+
         if (editingAppointment.value) {
-          // Update existing
-          const index = appointments.value.findIndex(a => a.id === editingAppointment.value.id)
-          if (index !== -1) {
-            appointments.value[index] = {
-              ...appointments.value[index],
-              appointment_date: appointmentDate.toISOString(),
-              duration_minutes: form.value.duration_minutes,
-              status: form.value.status,
-              reason: form.value.reason,
-              notes: form.value.notes
-            }
-          }
+          await updateAppointmentApi(editingAppointment.value.id, payload)
           toast.success('Appointment updated successfully')
         } else {
-          // Create new
-          const patient = patients.value.find(p => p.id === form.value.patient_id)
-          appointments.value.push({
-            id: Date.now(),
-            patient_name: patient?.full_name || 'Unknown',
-            patient_mrn: patient?.mrn || '',
-            patient_id: form.value.patient_id,
-            appointment_date: appointmentDate.toISOString(),
-            duration_minutes: form.value.duration_minutes,
-            status: form.value.status,
-            reason: form.value.reason,
-            notes: form.value.notes
-          })
+          await createAppointmentApi(payload)
           toast.success('Appointment created successfully')
         }
-        
+
+        allowAutoFetch.value = false
+        currentDate.value = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), 1)
+        await fetchAppointments()
+        allowAutoFetch.value = true
+
+        selectedDate.value = formatLocalDate(appointmentDate)
+        showDayModal.value = true
         closeModal()
       } catch (e) {
-        toast.error('Failed to save appointment')
+        allowAutoFetch.value = true
+        toast.error(e.message || 'Failed to save appointment')
       } finally {
         saving.value = false
       }
@@ -658,20 +636,17 @@ export default {
     const closeModal = () => {
       showAddModal.value = false
       editingAppointment.value = null
-      form.value = {
-        patient_id: '',
-        date: '',
-        time: '',
-        duration_minutes: 30,
-        status: 'scheduled',
-        reason: '',
-        notes: ''
-      }
+      form.value = defaultFormState()
     }
 
     onMounted(() => {
       fetchAppointments()
       fetchPatients()
+    })
+
+    watch(currentDate, async () => {
+      if (!allowAutoFetch.value) return
+      await fetchAppointments()
     })
 
     return {
@@ -693,10 +668,11 @@ export default {
       nextMonth,
       selectDate,
       closeDayModal,
-      formatDate,
+      formatDisplayDate,
       formatTime,
       getStatusClass,
       getStatusLabel,
+      openCreateModal,
       editAppointment,
       deleteAppointment,
       saveAppointment,
