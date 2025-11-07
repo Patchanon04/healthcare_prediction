@@ -89,7 +89,7 @@ pipeline {
             done
 
             echo "Running database migrations (one-off container)..."
-            docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend python manage.py makemigrations
+            docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend python manage.py makemigrations --check --dry-run || true
             docker-compose $ENV_ARG -f ${COMPOSE_FILE} -p ${COMPOSE_PROJECT_NAME} run --rm backend python manage.py migrate
 
             echo "Collecting static files..."
