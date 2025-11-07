@@ -182,7 +182,11 @@ def upload_image(request):
         
         # Map ML response to our schema
         ml_diagnosis = prediction_result.get('diagnosis') or prediction_result.get('breed')
-        ml_confidence = prediction_result.get('confidence')
+        ml_confidence_raw = prediction_result.get('confidence')
+        try:
+            ml_confidence = min(1.0, float(ml_confidence_raw)) if ml_confidence_raw is not None else None
+        except (TypeError, ValueError):
+            ml_confidence = None
         ml_model_version = prediction_result.get('model_version')
         ml_processing_time = prediction_result.get('processing_time')
 

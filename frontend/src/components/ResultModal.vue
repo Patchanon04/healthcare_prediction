@@ -93,7 +93,7 @@ export default {
   emits: ['close'],
   setup(props) {
     const confidencePercent = computed(() => {
-      return Math.round(props.prediction.confidence * 100)
+      return Math.min(100, Math.round((props.prediction.confidence || 0) * 100))
     })
 
     const confidenceColor = computed(() => {
