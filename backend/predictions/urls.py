@@ -18,7 +18,7 @@ urlpatterns = [
     path('seed-accounts/', views.seed_accounts, name='seed-accounts'),
     # appointments
     path('appointments/', views.AppointmentListCreateView.as_view(), name='appointments'),
-    path('appointments/<uuid:pk>/', views.AppointmentDetailView.as_view(), name='appointment-detail'),
+    path('appointments/<int:pk>/', views.AppointmentDetailView.as_view(), name='appointment-detail'),
     # auth (register removed)
     path('auth/login/', views.login, name='login'),
     path('auth/me/', views.me, name='me'),
