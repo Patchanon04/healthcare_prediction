@@ -144,6 +144,29 @@ export const updatePatient = async (id, data) => {
   return response.data
 }
 
+// Appointment APIs
+export const listAppointments = async ({ page = 1, pageSize = 100, start, end } = {}) => {
+  const params = { page, page_size: pageSize }
+  if (start) params.start = start
+  if (end) params.end = end
+  const response = await api.get('/api/v1/appointments/', { params })
+  return response.data
+}
+
+export const createAppointment = async (data) => {
+  const response = await api.post('/api/v1/appointments/', data)
+  return response.data
+}
+
+export const updateAppointment = async (id, data) => {
+  const response = await api.put(`/api/v1/appointments/${id}/`, data)
+  return response.data
+}
+
+export const deleteAppointment = async (id) => {
+  await api.delete(`/api/v1/appointments/${id}/`)
+}
+
 // Dashboard metrics
 export const getMetricsSummary = async () => {
   const res = await api.get('/api/v1/metrics/summary/')

@@ -16,6 +16,9 @@ urlpatterns = [
     path('patients/<int:patient_id>/transactions/', views.PatientTransactionsView.as_view(), name='patient-transactions'),
     path('health/', views.health_check, name='health'),
     path('seed-accounts/', views.seed_accounts, name='seed-accounts'),
+    # appointments
+    path('appointments/', views.AppointmentListCreateView.as_view(), name='appointments'),
+    path('appointments/<uuid:pk>/', views.AppointmentDetailView.as_view(), name='appointment-detail'),
     # auth (register removed)
     path('auth/login/', views.login, name='login'),
     path('auth/me/', views.me, name='me'),

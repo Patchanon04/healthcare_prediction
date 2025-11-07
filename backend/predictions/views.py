@@ -23,7 +23,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from .models import Transaction, UserProfile, Patient, ChatRoom, Message, TreatmentPlan, Medication, FollowUpNote
+from .models import Transaction, UserProfile, Patient, Appointment, ChatRoom, Message, TreatmentPlan, Medication, FollowUpNote
 from .serializers import (
     TransactionSerializer,
     UploadImageSerializer,
@@ -36,6 +36,7 @@ from .serializers import (
     TreatmentPlanSerializer,
     MedicationSerializer,
     FollowUpNoteSerializer,
+    AppointmentSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -292,6 +293,45 @@ class PatientTransactionsView(generics.ListAPIView):
     def get_queryset(self):
         patient_id = self.kwargs.get('patient_id')
         return Transaction.objects.filter(patient_id=patient_id).order_by('-uploaded_at')
+
+
+class AppointmentListCreateView(generics.ListCreateAPIView):
+    """List or create appointments."""
+
+    serializer_class = AppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = DefaultPagination
+
+    def get_queryset(self):
+        queryset = Appointment.objects.select_related('patient', 'doctor').order_by('appointment_date')
+        start = self.request.query_params.get('start')
+        end = self.request.query_params.get('end')
+        if start:
+            queryset = queryset.filter(appointment_date__date__gte=start)
+        if end:
+            queryset = queryset.filter(appointment_date__date__lte=end)
+        return queryset
+
+    def perform_create(self, serializer):
+        doctor = self.request.user if self.request.user.is_authenticated else None
+        serializer.save(doctor=doctor)
+
+
+class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete an appointment."""
+
+    serializer_class = AppointmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Appointment.objects.select_related('patient', 'doctor')
+
+    def perform_update(self, serializer):
+        doctor = self.request.user if self.request.user.is_authenticated else None
+        if doctor:
+            serializer.save(doctor=doctor)
+        else:
+            serializer.save()
 
 
 @api_view(['POST'])

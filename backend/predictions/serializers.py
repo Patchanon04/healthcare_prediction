@@ -2,7 +2,7 @@
 Serializers for medical diagnosis predictions API.
 """
 from rest_framework import serializers
-from .models import Transaction, UserProfile, Patient, ChatRoom, Message, TreatmentPlan, Medication, FollowUpNote
+from .models import Transaction, UserProfile, Patient, Appointment, ChatRoom, Message, TreatmentPlan, Medication, FollowUpNote
 from django.contrib.auth.models import User
 
 
@@ -47,6 +47,48 @@ class PatientSerializer(serializers.ModelSerializer):
         model = Patient
         fields = ['id', 'created_by', 'full_name', 'mrn', 'phone', 'age', 'gender', 'notes', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']
+
+
+class AppointmentSerializer(serializers.ModelSerializer):
+    """Serializer for appointments."""
+
+    patient_id = serializers.PrimaryKeyRelatedField(
+        queryset=Patient.objects.all(),
+        source='patient'
+    )
+    patient_name = serializers.CharField(source='patient.full_name', read_only=True)
+    patient_mrn = serializers.CharField(source='patient.mrn', read_only=True)
+    doctor_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Appointment
+        fields = [
+            'id',
+            'patient_id',
+            'patient_name',
+            'patient_mrn',
+            'doctor_name',
+            'appointment_date',
+            'duration_minutes',
+            'status',
+            'reason',
+            'notes',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = [
+            'id',
+            'patient_name',
+            'patient_mrn',
+            'doctor_name',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_doctor_name(self, obj):
+        if obj.doctor:
+            return obj.doctor.get_full_name() or obj.doctor.username
+        return None
 
 
 class UploadImageSerializer(serializers.Serializer):

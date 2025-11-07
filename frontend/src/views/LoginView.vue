@@ -1,6 +1,11 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-[#00838F] via-[#4DD0E1] to-white flex items-center justify-center p-6">
     <div class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+      <!-- Illustration -->
+      <div class="hidden md:flex items-center justify-center">
+        <img :src="Brain" alt="Brain illustration" class="w-full max-w-xl drop-shadow-2xl" />
+      </div>
+
       <!-- Login Form -->
       <div class="p-8 max-w-md w-full mx-auto md:mx-0">
         <div class="mb-8">
