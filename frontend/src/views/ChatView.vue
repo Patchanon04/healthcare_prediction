@@ -22,7 +22,7 @@
             <div
               v-for="room in rooms"
               :key="room.id"
-              @click="selectRoom(room)"
+              @click="selectRoom(room, { openMode: 'inline' })"
               :class="[
                 'p-4 border-b cursor-pointer hover:bg-gray-50 transition',
                 selectedRoom?.id === room.id ? 'bg-blue-50 border-l-4 border-[#00BCD4]' : ''
@@ -299,7 +299,7 @@ export default {
       }
     }
 
-    const selectRoom = async (room) => {
+    const selectRoom = async (room, { openMode = 'inline' } = {}) => {
       console.log(`🔍 Selecting room: ${room.id}`)
       
       // Mark messages as read before opening floating panel
@@ -331,9 +331,22 @@ export default {
         }
       }
       
-      // Open floating panel
-      console.log(`🚀 Opening floating panel for room ${room.id}`)
-      window.dispatchEvent(new CustomEvent('open-chat-room', { detail: { room } }))
+      if (openMode === 'floating') {
+        console.log(`🚀 Opening floating panel for room ${room.id}`)
+        window.dispatchEvent(new CustomEvent('open-chat-room', { detail: { room } }))
+        return
+      }
+
+      // Inline open inside ChatView
+      const currentId = selectedRoom.value?.id
+      if (currentId !== room.id) {
+        selectedRoom.value = { ...room }
+      } else {
+        selectedRoom.value = { ...selectedRoom.value, ...room }
+      }
+      messages.value = []
+      await fetchMessages(room.id)
+      connectWebSocket(room.id)
     }
 
     const createRoom = async () => {
@@ -686,8 +699,8 @@ export default {
         console.log(`🔍 Auto-selecting room from query param: ${roomId}`)
         const room = rooms.value.find(r => String(r.id) === String(roomId))
         if (room) {
-          console.log(`✅ Found room, calling selectRoom()`)
-          await selectRoom(room)
+          console.log(`✅ Found room, opening floating panel via selectRoom()`)
+          await selectRoom(room, { openMode: 'floating' })
         } else {
           console.warn(`⚠️ Room ${roomId} not found in rooms list`)
         }
@@ -700,8 +713,8 @@ export default {
         console.log(`🔍 Query param changed to room: ${newRoomId}`)
         const room = rooms.value.find(r => String(r.id) === String(newRoomId))
         if (room) {
-          console.log(`✅ Found room in watch, calling selectRoom()`)
-          await selectRoom(room)
+          console.log(`✅ Found room in watch, opening floating panel via selectRoom()`)
+          await selectRoom(room, { openMode: 'floating' })
         }
       }
     })
