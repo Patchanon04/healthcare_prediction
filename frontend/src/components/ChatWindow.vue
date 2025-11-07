@@ -115,9 +115,29 @@ export default {
     const scrollToBottom = () => { if (messagesEl.value) messagesEl.value.scrollTop = messagesEl.value.scrollHeight }
 
     const formatTime = (ts) => new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    const formatDateLabel = (dateStr) => {
+
+    const toLocalDateKey = (ts) => {
+      const date = new Date(ts)
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+
+    const fromLocalDateKey = (key) => {
+      if (!key || typeof key !== 'string') return null
+      const [yearStr, monthStr, dayStr] = key.split('-')
+      const year = Number(yearStr)
+      const month = Number(monthStr)
+      const day = Number(dayStr)
+      if (!year || !month || !day) return null
+      return new Date(year, month - 1, day)
+    }
+
+    const formatDateLabel = (dateKey) => {
       const today = new Date()
-      const date = new Date(dateStr)
+      const date = fromLocalDateKey(dateKey)
+      if (!date) return dateKey
       const isToday = date.toDateString() === today.toDateString()
       const yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
       const isYesterday = date.toDateString() === yesterday.toDateString()
@@ -127,7 +147,7 @@ export default {
     }
     const groupedMessages = computed(() => {
       const groups = messages.value.reduce((acc, message) => {
-        const dateKey = message.created_at ? new Date(message.created_at).toISOString().slice(0, 10) : 'unknown'
+        const dateKey = message.created_at ? toLocalDateKey(message.created_at) : 'unknown'
         if (!acc[dateKey]) acc[dateKey] = []
         acc[dateKey].push(message)
         return acc
