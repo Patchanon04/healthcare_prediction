@@ -1,9 +1,6 @@
-import uuid
-
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
-
 
 class Migration(migrations.Migration):
 
@@ -16,9 +13,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Appointment',
             fields=[
-                ('id', models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, serialize=False)),
                 ('appointment_date', models.DateTimeField(db_index=True)),
-                ('duration_minutes', models.PositiveIntegerField(default=30, help_text='Duration in minutes')), 
+                ('duration_minutes', models.PositiveIntegerField(default=30, help_text='Duration in minutes')),
                 ('status', models.CharField(choices=[('scheduled', 'Scheduled'), ('confirmed', 'Confirmed'), ('completed', 'Completed'), ('cancelled', 'Cancelled'), ('no_show', 'No Show')], db_index=True, default='scheduled', max_length=20)),
                 ('reason', models.TextField(blank=True, help_text='Reason for appointment')),
                 ('notes', models.TextField(blank=True, help_text="Doctor's notes")),
