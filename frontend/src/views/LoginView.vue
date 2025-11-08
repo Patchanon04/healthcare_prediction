@@ -4,7 +4,7 @@
       <!-- Login Form -->
       <div class="p-8 max-w-md w-full mx-auto md:mx-0 md:order-1">
         <div class="mb-8">
-          <h2 class="text-3xl font-bold text-white mb-2">OPEN BRAIN Health System</h2>
+          <h2 class="text-3xl font-bold text-white mb-2">Brain Tumor Diagnosis System</h2>
           <p class="text-white/80">Sign in to access your medical diagnosis</p>
         </div>
 
