@@ -2,7 +2,18 @@
 Serializers for medical diagnosis predictions API.
 """
 from rest_framework import serializers
-from .models import Transaction, UserProfile, Patient, Appointment, ChatRoom, Message, TreatmentPlan, Medication, FollowUpNote
+from .models import (
+    Transaction,
+    UserProfile,
+    Patient,
+    Appointment,
+    ChatRoom,
+    Message,
+    TreatmentPlan,
+    Medication,
+    FollowUpNote,
+    SecondOpinionRequest,
+)
 from django.contrib.auth.models import User
 
 
@@ -271,6 +282,87 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         
         return room
 
+
+# ==================== Second Opinion Serializers ====================
+
+
+class SecondOpinionRequestSerializer(serializers.ModelSerializer):
+    """Serializer for second opinion workflow."""
+
+    requester = serializers.PrimaryKeyRelatedField(read_only=True)
+    assignee = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    patient_name = serializers.CharField(source='patient.full_name', read_only=True)
+    diagnosis_summary = serializers.SerializerMethodField()
+    assignee_username = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SecondOpinionRequest
+        fields = [
+            'id',
+            'requester',
+            'assignee',
+            'assignee_username',
+            'patient',
+            'patient_name',
+            'diagnosis',
+            'diagnosis_summary',
+            'question',
+            'status',
+            'due_at',
+            'notes',
+            'response',
+            'responded_at',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'requester', 'patient_name', 'diagnosis_summary', 'responded_at', 'created_at', 'updated_at']
+
+    def get_diagnosis_summary(self, obj):
+        if obj.diagnosis:
+            return {
+                'id': str(obj.diagnosis.id),
+                'diagnosis': obj.diagnosis.diagnosis,
+                'confidence': obj.diagnosis.confidence,
+                'model_version': obj.diagnosis.model_version,
+                'uploaded_at': obj.diagnosis.uploaded_at,
+            }
+        return None
+
+    def get_assignee_username(self, obj):
+        if obj.assignee:
+            return obj.assignee.get_username()
+        return None
+
+    def validate(self, attrs):
+        status_value = attrs.get('status', self.instance.status if self.instance else SecondOpinionRequest.STATUS_PENDING)
+        response_value = attrs.get('response')
+
+        if self.instance is None and status_value != SecondOpinionRequest.STATUS_PENDING:
+            raise serializers.ValidationError({'status': 'New requests must start in pending status.'})
+
+        if status_value in [SecondOpinionRequest.STATUS_COMPLETED, SecondOpinionRequest.STATUS_DECLINED] and not response_value:
+            raise serializers.ValidationError({'response': 'Response is required when marking request as completed or declined.'})
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        response_value = validated_data.get('response')
+        status_value = validated_data.get('status')
+
+        # apply updates
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        if response_value or status_value in [SecondOpinionRequest.STATUS_COMPLETED, SecondOpinionRequest.STATUS_DECLINED]:
+            instance.mark_responded(status=status_value)
+
+        return instance
 
 # ==================== Treatment Management Serializers ====================
 

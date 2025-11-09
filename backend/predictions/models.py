@@ -182,6 +182,81 @@ class Message(models.Model):
         return f"{self.sender.username}: {self.content[:50]}"
 
 
+# ==================== Second Opinion Models ====================
+
+
+class SecondOpinionRequest(models.Model):
+    """Workflow entity for requesting and tracking second opinions."""
+
+    STATUS_PENDING = 'pending'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_COMPLETED = 'completed'
+    STATUS_DECLINED = 'declined'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_ACCEPTED, 'Accepted'),
+        (STATUS_COMPLETED, 'Completed'),
+        (STATUS_DECLINED, 'Declined'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    requester = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='requested_second_opinions',
+    )
+    assignee = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_second_opinions',
+    )
+    patient = models.ForeignKey(
+        Patient,
+        on_delete=models.CASCADE,
+        related_name='second_opinion_requests',
+    )
+    diagnosis = models.ForeignKey(
+        Transaction,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='second_opinion_requests',
+        help_text="Primary diagnosis transaction for context",
+    )
+    question = models.TextField(help_text="Clinical question or context for the second opinion")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    due_at = models.DateTimeField(null=True, blank=True, help_text="Deadline for the response")
+    notes = models.TextField(blank=True, default='', help_text="Additional requester notes")
+    response = models.TextField(blank=True, default='', help_text="Responder's detailed answer")
+    responded_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'second_opinion_requests'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status'], name='second_opinion_status_idx'),
+            models.Index(fields=['assignee', 'status'], name='second_opinion_assignee_status_idx'),
+            models.Index(fields=['patient'], name='second_opinion_patient_idx'),
+        ]
+
+    def mark_responded(self, status=None):
+        self.responded_at = timezone.now()
+        if status and status in dict(self.STATUS_CHOICES):
+            self.status = status
+        elif self.status == self.STATUS_PENDING:
+            self.status = self.STATUS_COMPLETED
+        self.save(update_fields=['response', 'responded_at', 'status', 'updated_at'])
+
+    def __str__(self):
+        assignee = self.assignee.username if self.assignee else 'Unassigned'
+        return f"SecondOpinion[{self.status}] for {self.patient.full_name} -> {assignee}"
+
+
 # ==================== Treatment Management Models ====================
 
 class TreatmentPlan(models.Model):

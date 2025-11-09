@@ -15,6 +15,7 @@ from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 from django.contrib.auth import authenticate
 from rest_framework import status, generics, permissions
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
@@ -23,7 +24,18 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from .models import Transaction, UserProfile, Patient, Appointment, ChatRoom, Message, TreatmentPlan, Medication, FollowUpNote
+from .models import (
+    Transaction,
+    UserProfile,
+    Patient,
+    Appointment,
+    ChatRoom,
+    Message,
+    TreatmentPlan,
+    Medication,
+    FollowUpNote,
+    SecondOpinionRequest,
+)
 from .serializers import (
     TransactionSerializer,
     UploadImageSerializer,
@@ -37,6 +49,7 @@ from .serializers import (
     MedicationSerializer,
     FollowUpNoteSerializer,
     AppointmentSerializer,
+    SecondOpinionRequestSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,6 +62,21 @@ class DefaultPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
+
+
+def ensure_user_can_access_request(user, request_obj):
+    """Ensure the user is allowed to access/modify the given second opinion request."""
+
+    if user.is_superuser:
+        return
+
+    if request_obj.requester_id == user.id:
+        return
+
+    if request_obj.assignee_id == user.id:
+        return
+
+    raise PermissionDenied("You do not have permission to access this second opinion request.")
 
 
 @retry(
@@ -336,6 +364,72 @@ class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
             serializer.save(doctor=doctor)
         else:
             serializer.save()
+
+
+class SecondOpinionRequestListCreateView(generics.ListCreateAPIView):
+    """List or create second opinion requests."""
+
+    serializer_class = SecondOpinionRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = DefaultPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = SecondOpinionRequest.objects.select_related('patient', 'diagnosis', 'requester', 'assignee')
+        status_filter = self.request.query_params.get('status')
+        diagnosis_filter = self.request.query_params.get('diagnosis')
+
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        if diagnosis_filter:
+            qs = qs.filter(diagnosis__id=diagnosis_filter)
+
+        if user.is_superuser:
+            return qs
+        return qs.filter(Q(requester=user) | Q(assignee=user))
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        patient = serializer.validated_data['patient']
+
+        # Ensure the requester has access to the patient record
+        if patient.created_by and patient.created_by != user and not user.is_superuser:
+            raise PermissionDenied("You do not have access to this patient.")
+
+        serializer.save(requester=user)
+
+
+class SecondOpinionRequestDetailView(generics.RetrieveUpdateAPIView):
+    """Retrieve or update a single second opinion request."""
+
+    serializer_class = SecondOpinionRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = SecondOpinionRequest.objects.select_related('patient', 'diagnosis', 'requester', 'assignee')
+
+    def get_object(self):
+        obj = super().get_object()
+        ensure_user_can_access_request(self.request.user, obj)
+        return obj
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        user = self.request.user
+
+        ensure_user_can_access_request(user, instance)
+
+        status_value = serializer.validated_data.get('status', instance.status)
+        assignee_value = serializer.validated_data.get('assignee', instance.assignee)
+
+        if status_value == SecondOpinionRequest.STATUS_ACCEPTED and assignee_value and assignee_value.id != user.id and not user.is_superuser:
+            raise PermissionDenied("Only the assigned specialist can accept this request.")
+
+        if status_value in [SecondOpinionRequest.STATUS_COMPLETED, SecondOpinionRequest.STATUS_DECLINED]:
+            assignee_id = assignee_value.id if assignee_value else instance.assignee_id
+            if assignee_id not in [None, user.id] and not user.is_superuser:
+                raise PermissionDenied("Only the assigned specialist can complete or decline this request.")
+
+        serializer.save()
 
 
 @api_view(['POST'])
