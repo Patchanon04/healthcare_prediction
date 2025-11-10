@@ -308,7 +308,12 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             pass
 
     async def notify(self, event):
-        # Forward notification (chat or second opinion) to client unchanged
-        payload = {k: v for k, v in event.items() if k != 'type'}
-        payload['type'] = 'notification'
-        await self.send(text_data=json.dumps(payload))
+        # Forward notification to client
+        await self.send(text_data=json.dumps({
+            'type': 'notification',
+            'room_id': event.get('room_id'),
+            'room_name': event.get('room_name'),
+            'sender': event.get('sender'),
+            'content': event.get('content'),
+            'created_at': event.get('created_at'),
+        }))

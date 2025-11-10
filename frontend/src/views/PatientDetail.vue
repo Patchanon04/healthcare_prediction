@@ -72,7 +72,6 @@
                 <th class="text-left px-4 py-2">Confidence</th>
                 <th class="text-left px-4 py-2">Model</th>
                 <th class="text-left px-4 py-2">Image</th>
-                <th class="text-left px-4 py-2">Details</th>
               </tr>
             </thead>
             <tbody>
@@ -83,11 +82,6 @@
                 <td class="px-4 py-2">{{ t.model_version }}</td>
                 <td class="px-4 py-2">
                   <a :href="t.image_url" target="_blank" class="text-[#00BCD4] hover:underline">View</a>
-                </td>
-                <td class="px-4 py-2">
-                  <button @click="goToDiagnosisDetail(t.id)" class="text-[#2C597D] hover:underline">
-                    Details
-                  </button>
                 </td>
               </tr>
             </tbody>
@@ -227,7 +221,6 @@
 
 <script>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toastification'
 import AppShell from '../components/AppShell.vue'
 import UploadForm from '../components/UploadForm.vue'
@@ -239,7 +232,6 @@ export default {
   components: { AppShell, UploadForm, TreatmentManagement },
   setup(props, { attrs, root }) {
     const toast = useToast()
-    const router = useRouter()
     const showResult = ref(false)
     const resultTx = ref(null)
     const routeId = Number(window.location.pathname.split('/').pop())
@@ -332,11 +324,6 @@ export default {
       fetchTransactions()
     }
 
-    const goToDiagnosisDetail = (diagnosisId) => {
-      if (!diagnosisId) return
-      router.push({ name: 'DiagnosisDetail', params: { id: diagnosisId } })
-    }
-
     const onUploadSuccess = (tx) => {
       refresh()
       resultTx.value = tx
@@ -352,7 +339,7 @@ export default {
       fetchTransactions()
     })
 
-    return { patient, transactions, loadingPatient, loadingTx, genderLabel, formatDate, page, pageSize, count, totalPages, go, refresh, onUploadSuccess, showResult, resultTx, getConfidenceBadge, showEdit, editForm, savingEdit, openEdit, saveEdit, activeTab, goToDiagnosisDetail }
+    return { patient, transactions, loadingPatient, loadingTx, genderLabel, formatDate, page, pageSize, count, totalPages, go, refresh, onUploadSuccess, showResult, resultTx, getConfidenceBadge, showEdit, editForm, savingEdit, openEdit, saveEdit, activeTab }
   }
 }
 </script>

@@ -15,7 +15,6 @@ from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 from django.contrib.auth import authenticate
 from rest_framework import status, generics, permissions
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
@@ -24,18 +23,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from .models import (
-    Transaction,
-    UserProfile,
-    Patient,
-    Appointment,
-    ChatRoom,
-    Message,
-    TreatmentPlan,
-    Medication,
-    FollowUpNote,
-    SecondOpinionRequest,
-)
+from .models import Transaction, UserProfile, Patient, Appointment, ChatRoom, Message, TreatmentPlan, Medication, FollowUpNote
 from .serializers import (
     TransactionSerializer,
     UploadImageSerializer,
@@ -49,7 +37,6 @@ from .serializers import (
     MedicationSerializer,
     FollowUpNoteSerializer,
     AppointmentSerializer,
-    SecondOpinionRequestSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -62,69 +49,6 @@ class DefaultPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
-
-
-def notify_user(user_id, payload):
-    """Send a notification payload to the given user via Channels."""
-    if not user_id:
-        return
-    try:
-        channel_layer = get_channel_layer()
-        if not channel_layer:
-            return
-        event = {'type': 'notify'}
-        event.update(payload)
-        async_to_sync(channel_layer.group_send)(f'user_{user_id}', event)
-    except Exception:
-        logger.exception("Failed to notify user %s", user_id)
-
-
-def build_second_opinion_notification(request_obj, actor=None, verb='created'):
-    """Construct notification payload for a second opinion request assignment."""
-    diagnosis_id = getattr(request_obj, 'diagnosis_id', None)
-    link = f"/diagnoses/{diagnosis_id}" if diagnosis_id else f"/patients/{request_obj.patient_id}"
-    patient_name = getattr(request_obj.patient, 'full_name', 'Patient')
-    actor_name = None
-    if actor:
-        actor_name = getattr(actor, 'get_full_name', lambda: '')()
-        if not actor_name:
-            actor_name = getattr(actor, 'username', None)
-    message_parts = [f"Second opinion {verb} for {patient_name}."]
-    if request_obj.question:
-        message_parts.append(request_obj.question[:140])
-    message = " • ".join(message_parts)
-
-    timestamp = getattr(request_obj, 'updated_at', None) or getattr(request_obj, 'created_at', None) or timezone.now()
-
-    return {
-        'id': str(request_obj.id),
-        'category': 'second_opinion',
-        'request_id': str(request_obj.id),
-        'diagnosis_id': str(diagnosis_id) if diagnosis_id else None,
-        'patient_id': request_obj.patient_id,
-        'patient_name': patient_name,
-        'title': 'Second opinion request',
-        'message': message,
-        'link': link,
-        'actor': actor_name,
-        'status': request_obj.status,
-        'created_at': timestamp.isoformat(),
-    }
-
-
-def ensure_user_can_access_request(user, request_obj):
-    """Ensure the user is allowed to access/modify the given second opinion request."""
-
-    if user.is_superuser:
-        return
-
-    if request_obj.requester_id == user.id:
-        return
-
-    if request_obj.assignee_id == user.id:
-        return
-
-    raise PermissionDenied("You do not have permission to access this second opinion request.")
 
 
 @retry(
@@ -337,11 +261,8 @@ class PatientListCreateView(generics.ListCreateAPIView):
     pagination_class = DefaultPagination
 
     def get_queryset(self):
-        user = self.request.user
-        qs = Patient.objects.filter(
-            Q(created_by=user) |
-            Q(second_opinion_requests__assignee=user)
-        ).distinct().order_by('-created_at')
+        # Filter patients by current user
+        qs = Patient.objects.filter(created_by=self.request.user).order_by('-created_at')
         search = self.request.query_params.get('search')
         if search:
             qs = qs.filter(
@@ -362,11 +283,7 @@ class PatientDetailView(generics.RetrieveUpdateAPIView):
     
     def get_queryset(self):
         """Only allow access to own patients."""
-        user = self.request.user
-        return Patient.objects.filter(
-            Q(created_by=user) |
-            Q(second_opinion_requests__assignee=user)
-        ).distinct()
+        return Patient.objects.filter(created_by=self.request.user)
 
 
 class PatientTransactionsView(generics.ListAPIView):
@@ -419,117 +336,6 @@ class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
             serializer.save(doctor=doctor)
         else:
             serializer.save()
-
-
-class SecondOpinionRequestListCreateView(generics.ListCreateAPIView):
-    """List or create second opinion requests."""
-
-    serializer_class = SecondOpinionRequestSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    pagination_class = DefaultPagination
-
-    def get_queryset(self):
-        user = self.request.user
-        qs = SecondOpinionRequest.objects.select_related('patient', 'diagnosis', 'requester', 'assignee')
-        status_filter = self.request.query_params.get('status')
-        diagnosis_filter = self.request.query_params.get('diagnosis')
-
-        if status_filter:
-            qs = qs.filter(status=status_filter)
-
-        if diagnosis_filter:
-            qs = qs.filter(diagnosis__id=diagnosis_filter)
-
-        if user.is_superuser:
-            return qs
-        return qs.filter(Q(requester=user) | Q(assignee=user))
-
-    def perform_create(self, serializer):
-        user = self.request.user
-        patient = serializer.validated_data['patient']
-
-        # Ensure the requester has access to the patient record
-        if patient.created_by and patient.created_by != user and not user.is_superuser:
-            raise PermissionDenied("You do not have access to this patient.")
-
-        serializer.save(requester=user)
-        request_obj = serializer.instance
-        if request_obj.assignee_id:
-            payload = build_second_opinion_notification(request_obj, actor=user, verb='created')
-            notify_user(request_obj.assignee_id, payload)
-
-
-class SecondOpinionRequestDetailView(generics.RetrieveUpdateAPIView):
-    """Retrieve or update a single second opinion request."""
-
-    serializer_class = SecondOpinionRequestSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = SecondOpinionRequest.objects.select_related('patient', 'diagnosis', 'requester', 'assignee')
-
-    def get_object(self):
-        obj = super().get_object()
-        ensure_user_can_access_request(self.request.user, obj)
-        return obj
-
-    def perform_update(self, serializer):
-        instance = serializer.instance
-        user = self.request.user
-
-        ensure_user_can_access_request(user, instance)
-
-        previous_assignee_id = instance.assignee_id
-        previous_status = instance.status
-
-        status_value = serializer.validated_data.get('status', instance.status)
-        assignee_value = serializer.validated_data.get('assignee', instance.assignee)
-
-        if status_value == SecondOpinionRequest.STATUS_ACCEPTED and assignee_value and assignee_value.id != user.id and not user.is_superuser:
-            raise PermissionDenied("Only the assigned specialist can accept this request.")
-
-        if status_value in [SecondOpinionRequest.STATUS_COMPLETED, SecondOpinionRequest.STATUS_DECLINED]:
-            assignee_id = assignee_value.id if assignee_value else instance.assignee_id
-            if assignee_id not in [None, user.id] and not user.is_superuser:
-                raise PermissionDenied("Only the assigned specialist can complete or decline this request.")
-
-        serializer.save()
-        instance.refresh_from_db()
-
-        new_assignee_id = instance.assignee_id
-        new_status = instance.status
-
-        if new_assignee_id and (new_assignee_id != previous_assignee_id or previous_status != new_status):
-            verb = 'assigned' if new_assignee_id != previous_assignee_id else f'status → {instance.get_status_display()}'
-            payload = build_second_opinion_notification(instance, actor=user, verb=verb)
-            notify_user(new_assignee_id, payload)
-
-        if previous_assignee_id and previous_assignee_id != new_assignee_id:
-            payload = build_second_opinion_notification(instance, actor=user, verb='reassigned')
-            notify_user(previous_assignee_id, payload)
-
-        # Notify requester when there is a meaningful status update (e.g. completed/declined/accepted)
-        notify_requester_statuses = {
-            SecondOpinionRequest.STATUS_COMPLETED: 'completed',
-            SecondOpinionRequest.STATUS_DECLINED: 'declined',
-            SecondOpinionRequest.STATUS_ACCEPTED: 'accepted',
-        }
-        if instance.requester_id and new_status in notify_requester_statuses:
-            verb = f"{notify_requester_statuses[new_status]} by specialist"
-            payload = build_second_opinion_notification(instance, actor=user, verb=verb)
-            notify_user(instance.requester_id, payload)
-
-
-@api_view(['GET'])
-@permission_classes([permissions.IsAuthenticated])
-def second_opinion_notifications(request):
-    """Return pending second opinion notifications for current user."""
-    qs = (
-        SecondOpinionRequest.objects
-        .select_related('patient', 'diagnosis')
-        .filter(assignee=request.user, status=SecondOpinionRequest.STATUS_PENDING)
-        .order_by('-created_at')[:50]
-    )
-    notifications = [build_second_opinion_notification(req, verb='pending') for req in qs]
-    return Response({'notifications': notifications})
 
 
 @api_view(['POST'])

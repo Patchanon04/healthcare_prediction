@@ -19,10 +19,6 @@ urlpatterns = [
     # appointments
     path('appointments/', views.AppointmentListCreateView.as_view(), name='appointments'),
     path('appointments/<int:pk>/', views.AppointmentDetailView.as_view(), name='appointment-detail'),
-    # second opinion workflow
-    path('second-opinions/', views.SecondOpinionRequestListCreateView.as_view(), name='second-opinion-list'),
-    path('second-opinions/<uuid:pk>/', views.SecondOpinionRequestDetailView.as_view(), name='second-opinion-detail'),
-    path('second-opinions/notifications/', views.second_opinion_notifications, name='second-opinion-notifications'),
     # auth (register removed)
     path('auth/login/', views.login, name='login'),
     path('auth/me/', views.me, name='me'),

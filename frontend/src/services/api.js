@@ -272,46 +272,6 @@ export const globalSearch = async (query) => {
   return response.data
 }
 
-// Second Opinion APIs
-export const listSecondOpinions = async ({
-  page = 1,
-  pageSize = 10,
-  status,
-  diagnosis,
-  patient,
-  requester,
-  assignee,
-} = {}) => {
-  const params = { page, page_size: pageSize }
-  if (status) params.status = status
-  if (diagnosis) params.diagnosis = diagnosis
-  if (patient) params.patient = patient
-  if (requester) params.requester = requester
-  if (assignee) params.assignee = assignee
-  const response = await api.get('/api/v1/second-opinions/', { params })
-  return response.data
-}
-
-export const getSecondOpinionNotifications = async () => {
-  const response = await api.get('/api/v1/second-opinions/notifications/')
-  return response.data
-}
-
-export const createSecondOpinion = async (data) => {
-  const response = await api.post('/api/v1/second-opinions/', data)
-  return response.data
-}
-
-export const getSecondOpinion = async (id) => {
-  const response = await api.get(`/api/v1/second-opinions/${id}/`)
-  return response.data
-}
-
-export const updateSecondOpinion = async (id, data) => {
-  const response = await api.patch(`/api/v1/second-opinions/${id}/`, data)
-  return response.data
-}
-
 // Treatment Management APIs
 export const getTreatmentPlans = async (patientId) => {
   const response = await api.get(`/api/v1/patients/${patientId}/treatments/`)

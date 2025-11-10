@@ -6,8 +6,6 @@ import PatientDetail from '../views/PatientDetail.vue'
 import ProfileView from '../views/ProfileView.vue'
 import ChatView from '../views/ChatView.vue'
 import AppointmentsView from '../views/AppointmentsView.vue'
-import DiagnosisDetail from '../views/DiagnosisDetail.vue'
-import SecondOpinionTasks from '../views/SecondOpinionTasks.vue'
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -16,11 +14,9 @@ const routes = [
   // Register route removed
   { path: '/patients', name: 'Patients', component: PatientsList, meta: { title: 'Patients' } },
   { path: '/patients/:id', name: 'PatientDetail', component: PatientDetail, props: true },
-  { path: '/diagnoses/:id', name: 'DiagnosisDetail', component: DiagnosisDetail, props: true },
   { path: '/profile', name: 'Profile', component: ProfileView },
   { path: '/chat', name: 'Chat', component: ChatView, meta: { title: 'Chat' } },
   { path: '/appointments', name: 'Appointments', component: AppointmentsView, meta: { title: 'Appointments' } },
-  { path: '/second-opinions/tasks', name: 'SecondOpinionTasks', component: SecondOpinionTasks, meta: { title: 'Second Opinion Tasks' } },
 ]
 
 const router = createRouter({
