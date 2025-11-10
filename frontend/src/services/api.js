@@ -273,9 +273,21 @@ export const globalSearch = async (query) => {
 }
 
 // Second Opinion APIs
-export const listSecondOpinions = async ({ page = 1, pageSize = 10, status } = {}) => {
+export const listSecondOpinions = async ({
+  page = 1,
+  pageSize = 10,
+  status,
+  diagnosis,
+  patient,
+  requester,
+  assignee,
+} = {}) => {
   const params = { page, page_size: pageSize }
   if (status) params.status = status
+  if (diagnosis) params.diagnosis = diagnosis
+  if (patient) params.patient = patient
+  if (requester) params.requester = requester
+  if (assignee) params.assignee = assignee
   const response = await api.get('/api/v1/second-opinions/', { params })
   return response.data
 }

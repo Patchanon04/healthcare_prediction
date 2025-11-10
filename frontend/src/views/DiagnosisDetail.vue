@@ -271,6 +271,7 @@ export default {
       try {
         transaction.value = await getTransaction(route.params.id)
         buildActivity()
+        await fetchSecondOpinions()
       } catch (e) {
         error.value = e.message || 'Failed to load diagnosis'
       } finally {
@@ -292,8 +293,17 @@ export default {
       if (!secondOpinionEnabled) return
       loadingSecondOpinions.value = true
       try {
-        const res = await listSecondOpinions({ pageSize: 50, diagnosis: route.params.id })
-        secondOpinions.value = res.results || []
+        const patientId = transaction.value?.patient_data?.id
+        const params = { pageSize: 50, diagnosis: route.params.id }
+        if (patientId) params.patient = patientId
+        const res = await listSecondOpinions(params)
+        const items = res.results || []
+        if (patientId) {
+          const matchId = String(patientId)
+          secondOpinions.value = items.filter(item => String(item.patient) === matchId)
+        } else {
+          secondOpinions.value = items
+        }
       } catch (e) {
         toast.error(e.message || 'Failed to load second opinions')
       } finally {
@@ -434,7 +444,6 @@ export default {
 
     onMounted(() => {
       fetchTransaction()
-      fetchSecondOpinions()
       fetchSpecialists()
        fetchCurrentUser()
     })
@@ -443,7 +452,6 @@ export default {
       () => route.params.id,
       () => {
         fetchTransaction()
-        fetchSecondOpinions()
       }
     )
 
