@@ -506,6 +506,17 @@ class SecondOpinionRequestDetailView(generics.RetrieveUpdateAPIView):
             payload = build_second_opinion_notification(instance, actor=user, verb='reassigned')
             notify_user(previous_assignee_id, payload)
 
+        # Notify requester when there is a meaningful status update (e.g. completed/declined/accepted)
+        notify_requester_statuses = {
+            SecondOpinionRequest.STATUS_COMPLETED: 'completed',
+            SecondOpinionRequest.STATUS_DECLINED: 'declined',
+            SecondOpinionRequest.STATUS_ACCEPTED: 'accepted',
+        }
+        if instance.requester_id and new_status in notify_requester_statuses:
+            verb = f"{notify_requester_statuses[new_status]} by specialist"
+            payload = build_second_opinion_notification(instance, actor=user, verb=verb)
+            notify_user(instance.requester_id, payload)
+
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
