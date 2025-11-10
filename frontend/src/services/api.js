@@ -280,6 +280,11 @@ export const listSecondOpinions = async ({ page = 1, pageSize = 10, status } = {
   return response.data
 }
 
+export const getSecondOpinionNotifications = async () => {
+  const response = await api.get('/api/v1/second-opinions/notifications/')
+  return response.data
+}
+
 export const createSecondOpinion = async (data) => {
   const response = await api.post('/api/v1/second-opinions/', data)
   return response.data

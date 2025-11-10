@@ -26,6 +26,19 @@
         </router-link>
 
         <router-link 
+          to="/second-opinions/tasks"
+          class="block px-6 py-3 rounded-r-full hover:bg-white/10 transition text-[#00BCD4] bg-white border-2 border-transparent max-w-[200px]"
+          active-class="!text-orange-500 !border-orange-500"
+        >
+          <span class="font-semibold text-lg flex items-center justify-between">
+            <span>Second Opinions</span>
+            <span v-if="secondOpinionCount > 0" class="ml-3 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-600 rounded-full">
+              {{ secondOpinionCount > 99 ? '99+' : secondOpinionCount }}
+            </span>
+          </span>
+        </router-link>
+
+        <router-link 
           to="/chat"
           class="block px-6 py-3 rounded-r-full hover:bg-white/10 transition text-[#00BCD4] bg-white border-2 border-transparent max-w-[200px]"
           active-class="!text-orange-500 !border-orange-500"
@@ -144,8 +157,8 @@
                 <svg class="w-6 h-6 text-gray-600 group-hover:text-[#00BCD4] transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                 </svg>
-                <span v-if="unreadCount > 0" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full min-w-[20px]">
-                  {{ unreadCount > 99 ? '99+' : unreadCount }}
+                <span v-if="totalNotificationCount > 0" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full min-w-[20px]">
+                  {{ totalNotificationCount > 99 ? '99+' : totalNotificationCount }}
                 </span>
               </button>
 
@@ -170,32 +183,40 @@
                   <div v-else class="overflow-y-auto flex-1">
                     <router-link
                       v-for="notif in notifications"
-                      :key="notif.room_id"
-                      :to="`/chat?room=${notif.room_id}`"
+                      :key="`${notif.type}-${notif.id}`"
+                      :to="notif.link"
                       @click="closeNotifications"
                       class="block px-4 py-3 hover:bg-gray-50 transition border-b last:border-b-0"
                     >
                       <div class="flex items-start gap-3">
                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] text-white flex items-center justify-center font-semibold flex-shrink-0">
-                          {{ notif.room_name.charAt(0).toUpperCase() }}
+                          {{ notif.avatarLabel }}
                         </div>
                         <div class="flex-1 min-w-0">
-                          <div class="font-semibold text-sm text-[#2C597D] truncate">{{ notif.room_name }}</div>
-                          <div class="text-sm text-gray-700 line-clamp-2">{{ notif.last_message }}</div>
-                          <div class="flex items-center gap-2 mt-1">
-                            <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-600 rounded-full">
-                              {{ notif.unread_count }}
+                          <div class="font-semibold text-sm text-[#2C597D] truncate flex items-center gap-2">
+                            <span>{{ notif.title }}</span>
+                            <span v-if="notif.tag" class="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full bg-[#00BCD4]/10 text-[#00838F]">
+                              {{ notif.tag }}
                             </span>
-                            <span class="text-xs text-gray-500">{{ formatNotifTime(notif.last_message_time) }}</span>
+                          </div>
+                          <div class="text-sm text-gray-700 line-clamp-2">{{ notif.message }}</div>
+                          <div class="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                            <span v-if="notif.badge" class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-600 rounded-full">
+                              {{ notif.badge }}
+                            </span>
+                            <span>{{ formatNotifTime(notif.created_at) }}</span>
                           </div>
                         </div>
                       </div>
                     </router-link>
                   </div>
                   
-                  <div class="px-4 py-3 border-t bg-gray-50">
-                    <router-link to="/chat" @click="closeNotifications" class="text-sm text-[#00BCD4] hover:text-[#00ACC1] font-semibold">
-                      View all messages →
+                  <div class="px-4 py-3 border-t bg-gray-50 flex items-center justify-between text-sm">
+                    <router-link to="/chat" @click="closeNotifications" class="text-[#00BCD4] hover:text-[#00ACC1] font-semibold">
+                      View chat →
+                    </router-link>
+                    <router-link to="/patients" @click="closeNotifications" class="text-[#2C597D] hover:text-[#24476a] font-semibold">
+                      View tasks →
                     </router-link>
                   </div>
                 </div>
@@ -249,14 +270,13 @@
 
     <!-- Toast Notification -->
     <transition name="fade">
-      <div v-if="showToast" class="fixed top-4 right-4 z-50 bg-white shadow-xl rounded-lg p-4 w-80 border cursor-pointer" @click="openChatFromToast">
+      <div v-if="showToast" class="fixed top-4 right-4 z-50 bg-white shadow-xl rounded-lg p-4 w-80 border cursor-pointer" @click="openToastLink">
         <div class="flex items-start gap-3">
           <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#00BCD4] to-[#00ACC1] text-white flex items-center justify-center font-semibold">
-            💬
+            {{ toastIcon }}
           </div>
           <div class="flex-1">
-            <div class="text-xs text-gray-500">New message from</div>
-            <div class="font-semibold text-[#2C597D]">{{ toastSender }}</div>
+            <div class="text-xs text-gray-500">{{ toastTitle }}</div>
             <div class="text-sm text-gray-700 line-clamp-2 mt-1">{{ toastContent }}</div>
           </div>
         </div>
@@ -295,7 +315,6 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
 import { userStore } from '../store/user'
 import ContactsPanel from './ContactsPanel.vue'
 import ChatWindow from './ChatWindow.vue'
@@ -319,11 +338,12 @@ export default {
       // Notification WS
       notifWs: null,
       showToast: false,
-      toastSender: '',
+      toastTitle: '',
       toastContent: '',
-      toastRoomId: null,
-      toastRoomName: '',
+      toastLink: null,
+      toastIcon: '🔔',
       unreadCount: 0,
+      secondOpinionCount: 0,
       searchQuery: '',
       searchResults: { patients: [], diagnoses: [], messages: [], total: 0 },
       searchLoading: false,
@@ -352,6 +372,9 @@ export default {
   computed: {
     profile() {
       return userStore.profile
+    },
+    totalNotificationCount() {
+      return (this.unreadCount || 0) + (this.secondOpinionCount || 0)
     },
     currentUserId() {
       // Try profile first, then userId from localStorage, then try to get from cached user
@@ -481,9 +504,10 @@ export default {
         this.unreadCount = newCount
         
         // If count increased, show badge again
+
         if (newCount > oldCount) {
           this.notificationsSeen = false
-          console.log('🔔 New messages arrived, showing badge')
+          console.log('🔔 New chat messages arrived, showing badge')
         }
         
         // If count is 0, mark as seen
@@ -622,11 +646,21 @@ export default {
           try {
             const data = JSON.parse(event.data)
             if (data.type === 'notification') {
-              // Only show toast for receiver (not sender)
-              this.showToastNotification(data.sender, data.content, data.room_id, data.room_name)
-              window.dispatchEvent(new CustomEvent('chat-notification', { detail: data }))
-              // Increment unread count
-              this.unreadCount++
+              const isSecondOpinion = data.category === 'second_opinion'
+              const notif = isSecondOpinion
+                ? this.transformSecondOpinionPayload(data)
+                : this.transformChatPayload(data)
+
+              this.prependNotification(notif)
+
+              if (isSecondOpinion) {
+                this.updateSecondOpinionCount()
+              } else {
+                this.unreadCount = (this.unreadCount || 0) + 1
+                window.dispatchEvent(new CustomEvent('chat-notification', { detail: data }))
+              }
+
+              this.showToastNotification(notif)
             }
           } catch (e) { /* ignore */ }
         }
@@ -642,22 +676,19 @@ export default {
         // swallow to prevent white screen
       }
     },
-    showToastNotification(sender, content, roomId, roomName) {
+    showToastNotification(notification) {
       this.showToast = true
-      this.toastSender = sender
-      this.toastContent = content
-      this.toastRoomId = roomId
-      this.toastRoomName = roomName || ''
+      this.toastTitle = notification.title || 'Notification'
+      this.toastContent = notification.message || notification.content || ''
+      this.toastLink = notification.link || null
+      this.toastIcon = notification.icon || '🔔'
       setTimeout(() => { this.showToast = false }, 5000)
     },
-    openChatFromToast() {
+    openToastLink() {
       this.showToast = false
-      if (!this.toastRoomId) {
-        this.$router.push({ name: 'Chat' })
-        return
+      if (this.toastLink) {
+        this.$router.push(this.toastLink)
       }
-      // Navigate to chat and trigger room selection via query param
-      this.$router.push({ name: 'Chat', query: { room: this.toastRoomId } })
     },
     async openChatWithUser(user) {
       try {
@@ -730,34 +761,27 @@ export default {
     async loadNotifications() {
       try {
         this.loadingNotifications = true
-        const { listChatRooms } = await import('../services/api')
-        const data = await listChatRooms({ pageSize: 50 })
-        
-        const rooms = data.results || []
-        this.notifications = rooms
+        const { listChatRooms, getSecondOpinionNotifications } = await import('../services/api')
+        const [chatData, soData] = await Promise.all([
+          listChatRooms({ pageSize: 50 }),
+          getSecondOpinionNotifications(),
+        ])
+
+        const rooms = chatData.results || []
+        const chatNotifications = rooms
           .filter(room => room.unread_count && room.unread_count > 0)
-          .map(room => {
-            let roomName = 'Chat'
-            if (room.name) {
-              roomName = room.name
-            } else if (room.members && Array.isArray(room.members)) {
-              roomName = room.members
-                .map(m => m.full_name || m.username || 'User')
-                .join(', ')
-            }
-            
-            return {
-              room_id: room.id,
-              room_name: roomName,
-              unread_count: room.unread_count,
-              last_message: room.last_message?.content || 'New message',
-              last_message_time: room.last_message?.created_at || room.updated_at || new Date().toISOString()
-            }
-          })
-          .sort((a, b) => new Date(b.last_message_time) - new Date(a.last_message_time))
+          .map(room => this.transformChatRoom(room))
+
+        const soRaw = soData.notifications || []
+        const soNotifications = soRaw.map(this.transformSecondOpinionNotification)
+        this.secondOpinionCount = soNotifications.length
+
+        this.notifications = [...chatNotifications, ...soNotifications]
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
       } catch (e) {
         console.error('❌ Failed to load notifications:', e)
         this.notifications = []
+        this.secondOpinionCount = 0
       } finally {
         this.loadingNotifications = false
       }
@@ -799,14 +823,96 @@ export default {
       this.showLogoutModal = false
       window.location.href = '/login'
     },
+    prependNotification(notification) {
+      if (!notification) return
+      const filtered = this.notifications.filter(
+        existing => !(existing.type === notification.type && existing.id === notification.id)
+      )
+      this.notifications = [notification, ...filtered].slice(0, 100)
+    },
+    updateSecondOpinionCount() {
+      this.secondOpinionCount = this.notifications.filter(n => n.type === 'second_opinion').length
+    },
+    transformChatRoom(room) {
+      let roomName = 'Chat'
+      if (room.name) {
+        roomName = room.name
+      } else if (room.room_type === 'direct' && Array.isArray(room.members)) {
+        const otherMember = room.members.find(m => String(m.id) !== String(this.currentUserId))
+        roomName = otherMember?.full_name || otherMember?.username || 'Direct Chat'
+      }
+      const lastMessage = room.last_message?.content || 'New messages waiting'
+      const lastMessageTime = room.last_message?.created_at || room.updated_at || new Date().toISOString()
+      return {
+        id: room.id,
+        type: 'chat',
+        title: roomName,
+        message: lastMessage,
+        created_at: lastMessageTime,
+        badge: room.unread_count || 0,
+        link: { name: 'Chat', query: { room: room.id } },
+        avatarLabel: (roomName || 'C').charAt(0).toUpperCase(),
+        icon: '💬',
+        tag: room.room_type === 'group' ? 'Group' : null,
+      }
+    },
+    transformSecondOpinionNotification(item) {
+      const statusLabel = item.status ? item.status.replace(/_/g, ' ') : 'Pending'
+      return {
+        id: item.request_id,
+        type: 'second_opinion',
+        title: item.patient_name || 'Second opinion',
+        message: item.message,
+        created_at: item.created_at || new Date().toISOString(),
+        badge: null,
+        link: item.link || '/patients',
+        avatarLabel: '🧠',
+        tag: statusLabel,
+        icon: '🧠',
+      }
+    },
+    transformChatPayload(data) {
+      const roomName = data.room_name || 'Chat'
+      return {
+        id: data.room_id,
+        type: 'chat',
+        title: roomName,
+        message: data.content || 'New message',
+        created_at: data.created_at || new Date().toISOString(),
+        badge: 1,
+        link: { name: 'Chat', query: { room: data.room_id } },
+        avatarLabel: (roomName || 'C').charAt(0).toUpperCase(),
+        icon: '💬',
+        tag: data.sender ? `From ${data.sender}` : null,
+      }
+    },
+    transformSecondOpinionPayload(data) {
+      const statusLabel = data.status ? data.status.replace(/_/g, ' ') : 'Pending'
+      return {
+        id: data.request_id,
+        type: 'second_opinion',
+        title: data.patient_name || 'Second opinion',
+        message: data.message || 'New second opinion request',
+        created_at: data.created_at || new Date().toISOString(),
+        badge: null,
+        link: data.link || '/patients',
+        avatarLabel: '🧠',
+        tag: statusLabel,
+        icon: '🧠',
+      }
+    },
   },
   watch: {
+    notifications: {
+      deep: true,
+      handler() {
+        this.updateSecondOpinionCount()
+      }
+    },
     openRooms: {
       deep: true,
       handler(newVal) {
-        // Don't save while restoring to avoid overwriting
         if (this.restoringRooms) return
-        
         try {
           const ids = newVal.map(r => r.id)
           localStorage.setItem('open_rooms', JSON.stringify(ids))
@@ -817,7 +923,6 @@ export default {
       }
     },
     contactsCollapsed(newVal) {
-      // Save contacts panel state to localStorage
       localStorage.setItem('contacts_collapsed', String(newVal))
       console.log(`💾 Contacts panel ${newVal ? 'collapsed' : 'expanded'}`)
     }
