@@ -374,6 +374,9 @@ export default {
       return userStore.profile
     },
     totalNotificationCount() {
+      if (this.notificationsSeen) {
+        return 0
+      }
       return (this.unreadCount || 0) + (this.secondOpinionCount || 0)
     },
     currentUserId() {
@@ -829,6 +832,7 @@ export default {
         existing => !(existing.type === notification.type && existing.id === notification.id)
       )
       this.notifications = [notification, ...filtered].slice(0, 100)
+      this.notificationsSeen = false
     },
     updateSecondOpinionCount() {
       this.secondOpinionCount = this.notifications.filter(n => n.type === 'second_opinion').length

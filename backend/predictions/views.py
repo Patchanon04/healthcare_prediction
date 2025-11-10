@@ -92,7 +92,9 @@ def build_second_opinion_notification(request_obj, actor=None, verb='created'):
     message_parts = [f"Second opinion {verb} for {patient_name}."]
     if request_obj.question:
         message_parts.append(request_obj.question[:140])
-    message = " \u2022 ".join(message_parts)
+    message = " • ".join(message_parts)
+
+    timestamp = getattr(request_obj, 'updated_at', None) or getattr(request_obj, 'created_at', None) or timezone.now()
 
     return {
         'id': str(request_obj.id),
@@ -106,7 +108,7 @@ def build_second_opinion_notification(request_obj, actor=None, verb='created'):
         'link': link,
         'actor': actor_name,
         'status': request_obj.status,
-        'created_at': timezone.now().isoformat(),
+        'created_at': timestamp.isoformat(),
     }
 
 
@@ -360,7 +362,11 @@ class PatientDetailView(generics.RetrieveUpdateAPIView):
     
     def get_queryset(self):
         """Only allow access to own patients."""
-        return Patient.objects.filter(created_by=self.request.user)
+        user = self.request.user
+        return Patient.objects.filter(
+            Q(created_by=user) |
+            Q(second_opinion_requests__assignee=user)
+        ).distinct()
 
 
 class PatientTransactionsView(generics.ListAPIView):
