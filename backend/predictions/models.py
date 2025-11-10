@@ -239,9 +239,9 @@ class SecondOpinionRequest(models.Model):
         db_table = 'second_opinion_requests'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['status'], name='second_opinion_status_idx'),
-            models.Index(fields=['assignee', 'status'], name='second_opinion_assignee_status_idx'),
-            models.Index(fields=['patient'], name='second_opinion_patient_idx'),
+            models.Index(fields=['status'], name='so_status_idx'),
+            models.Index(fields=['assignee', 'status'], name='so_assign_status_idx'),
+            models.Index(fields=['patient'], name='so_patient_idx'),
         ]
 
     def mark_responded(self, status=None):
