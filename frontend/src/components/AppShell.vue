@@ -374,7 +374,7 @@ export default {
       return userStore.profile
     },
     totalNotificationCount() {
-      if (this.notificationsSeen) {
+      if (this.notificationsSeen && !this.badgeLocked) {
         return 0
       }
       return (this.unreadCount || 0) + (this.secondOpinionCount || 0)
@@ -528,6 +528,7 @@ export default {
       this.fetchUnreadCount()
       // Reset seen flag so badge can show again if needed
       this.notificationsSeen = false
+      this.badgeLocked = true
     },
     handleOpenChatRoom(event) {
       const room = event.detail?.room
@@ -759,6 +760,7 @@ export default {
       if (this.showNotifications) {
         await this.loadNotifications()
         this.notificationsSeen = true
+        this.badgeLocked = false
       }
     },
     async loadNotifications() {
@@ -833,6 +835,7 @@ export default {
       )
       this.notifications = [notification, ...filtered].slice(0, 100)
       this.notificationsSeen = false
+      this.badgeLocked = true
     },
     updateSecondOpinionCount() {
       this.secondOpinionCount = this.notifications.filter(n => n.type === 'second_opinion').length
