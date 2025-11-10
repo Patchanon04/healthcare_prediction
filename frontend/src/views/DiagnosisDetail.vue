@@ -232,7 +232,9 @@ import {
   createSecondOpinion,
   updateSecondOpinion,
   listChatUsers,
+  getProfile,
 } from '../services/api'
+import { getStoredUser } from '../services/storage'
 
 const ROLE_SPECIALIST = ['radiologist', 'doctor']
 
