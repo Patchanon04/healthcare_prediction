@@ -13,6 +13,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Appointment',
             fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('appointment_date', models.DateTimeField(db_index=True)),
                 ('duration_minutes', models.PositiveIntegerField(default=30, help_text='Duration in minutes')),
                 ('status', models.CharField(choices=[('scheduled', 'Scheduled'), ('confirmed', 'Confirmed'), ('completed', 'Completed'), ('cancelled', 'Cancelled'), ('no_show', 'No Show')], db_index=True, default='scheduled', max_length=20)),

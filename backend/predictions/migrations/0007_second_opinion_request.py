@@ -36,14 +36,14 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='secondopinionrequest',
-            index=models.Index(fields=['status'], name='second_opinion_status_idx'),
+            index=models.Index(fields=['status'], name='so_status_idx'),
         ),
         migrations.AddIndex(
             model_name='secondopinionrequest',
-            index=models.Index(fields=['assignee', 'status'], name='second_opinion_assignee_status_idx'),
+            index=models.Index(fields=['assignee', 'status'], name='so_assign_status_idx'),
         ),
         migrations.AddIndex(
             model_name='secondopinionrequest',
-            index=models.Index(fields=['patient'], name='second_opinion_patient_idx'),
+            index=models.Index(fields=['patient'], name='so_patient_idx'),
         ),
     ]
