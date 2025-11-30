@@ -108,12 +108,18 @@ class BrainTumorModel1(BrainTumorModelBase):
         prediction = self.model.predict(processed_image, verbose=0)
 
         tumor_prob = float(prediction[0, 1])
+        predicted_class = "tumor" if tumor_prob >= 0.5 else "no_tumor"
         metadata = {
             "model_name": self.model_name,
             "input_shape": self.input_size,
             "raw_prediction": prediction[0].tolist(),
             "tumor_probability": tumor_prob,
             "no_tumor_probability": float(prediction[0, 0]),
+            "predicted_class": predicted_class,
+            "class_probabilities": {
+                "no_tumor": float(prediction[0, 0]),
+                "tumor": tumor_prob,
+            },
         }
 
         return tumor_prob, metadata

@@ -2,7 +2,7 @@ import time
 import os
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, List, Any
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
@@ -80,8 +80,10 @@ class BrainTumorPredictionResponse(BaseModel):
     selected_model: str
     model_version: str
     processing_time: float
-    all_predictions: list
+    all_predictions: List[Dict[str, Any]]
     strategy: str
+    predicted_class: Optional[str] = None
+    class_probabilities: Optional[Dict[str, float]] = None
 
 
 class HealthResponse(BaseModel):
@@ -223,7 +225,9 @@ async def predict_brain_tumor(file: UploadFile = File(...)):
             model_version=MODEL_VERSION,
             processing_time=processing_time,
             all_predictions=result["all_predictions"],
-            strategy=result["strategy"]
+            strategy=result["strategy"],
+            predicted_class=result.get("predicted_class"),
+            class_probabilities=result.get("class_probabilities"),
         )
         
     except HTTPException:
@@ -291,7 +295,9 @@ async def predict_brain_tumor_url(request: PredictionRequest):
             model_version=MODEL_VERSION,
             processing_time=processing_time,
             all_predictions=result["all_predictions"],
-            strategy=result["strategy"]
+            strategy=result["strategy"],
+            predicted_class=result.get("predicted_class"),
+            class_probabilities=result.get("class_probabilities"),
         )
         
     except HTTPException:
