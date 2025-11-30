@@ -95,9 +95,20 @@ class EnsemblePredictor:
         best_prediction["num_models"] = len(all_predictions)
 
         if ensemble_class_probabilities:
-            predicted_class = max(
-                ensemble_class_probabilities, key=ensemble_class_probabilities.get
-            )
+            binary_labels = {"tumor", "no_tumor", "no-tumor", "no tumor", "positive", "negative"}
+            detailed_probs = {
+                class_name: prob
+                for class_name, prob in ensemble_class_probabilities.items()
+                if class_name.lower() not in binary_labels
+            }
+
+            if detailed_probs:
+                predicted_class = max(detailed_probs, key=detailed_probs.get)
+            else:
+                predicted_class = max(
+                    ensemble_class_probabilities, key=ensemble_class_probabilities.get
+                )
+
             best_prediction["class_probabilities"] = ensemble_class_probabilities
             best_prediction["predicted_class"] = predicted_class
             best_prediction["diagnosis"] = self._format_diagnosis(
